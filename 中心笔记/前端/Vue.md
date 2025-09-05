@@ -11310,38 +11310,36 @@ export const useCounterStore = defineStore('counter', () => {
 ![image.png](assets/32.png)
 - 定义Store
 ```js
-import { defineStore } from 'pinia'
-import { ref } from 'vue'
+import { defineStore } from "pinia";
+import { ref } from "vue";
 
-export const useCounterStore = defineStore('counter',()=>{
-  const count = ref(0)
+export const useCounterStore = defineStore("counter", () => {
+  const count = ref(0);
+  const addCount = () => count.value++;
 
-  const msg = ref('test')
+  const msg = ref("test");
 
-  return {count,msg}
-})
+  return { count, msg, addCount };
+});
 ```
 - 组件使用Store
 ```vue
-<template>
-  <div>
-    App.vue根组件
-    - {{ CounterStore.count }}
-    - {{ CounterStore.msg }}
-    <SonCom1></SonCom1>
-    <SonCom2></SonCom2>
-    </div>
-</template>
-
 <script setup>
-import SonCom1 from './components/SonCom1.vue';
-import SonCom2 from './components/SonCom2.vue';
-import { useCounterStore } from './store/counter';
+import { useCounterStore } from '@/store/counter';
 
 const CounterStore = useCounterStore()
 </script>
 
-<style scoped></style>
+<template>
+  <div>
+    SonCom1 - {{ CounterStore.count }}
+    <button @click="CounterStore.addCount">+1</button>
+  </div>
+</template>
+
+<style lang="less" scoped>
+
+</style>
 ```
 ## 4. getters实现
 
