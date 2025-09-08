@@ -5165,7 +5165,7 @@ import store from "@/store"
 console.log(store.state.count)
 ```
 
-## 五、通过辅助函数  - mapState获取 state中的数据
+## 通过辅助函数  - mapState获取 state中的数据
 
 >mapState是辅助函数，帮助我们把store中的数据映射到 组件的计算属性中, 它属于一种方便的用法
 
@@ -11311,15 +11311,16 @@ export const useCounterStore = defineStore('counter', () => {
 - 定义Store
 ```js
 import { defineStore } from "pinia";
-import { ref } from "vue";
+import { computed, ref } from "vue";
 
 export const useCounterStore = defineStore("counter", () => {
   const count = ref(0);
   const addCount = () => count.value++;
+  const double = computed(() => count.value * 2);
 
   const msg = ref("test");
 
-  return { count, msg, addCount };
+  return { count, msg, addCount, double };
 });
 ```
 - 组件使用Store
@@ -11341,85 +11342,356 @@ const CounterStore = useCounterStore()
 
 </style>
 ```
-## 4. getters实现
+>在组件中引入store时不要直接解构需要的数据,这样会导致得到的数据丢失响应式,或者你可以在导入时在函数外套一个storeToRefs(),这样就会为每一个数据创建响应式,但是如果解构的属性中有方法存在,则方法需要额外再解构一次,而不是从stroeToRefs()解构
+```vue
+<template>
+  <div>
+    App.vue根组件 - {{ count }} - {{ msg }}
+    <SonCom1></SonCom1>
+    <SonCom2></SonCom2>
+  </div>
+  <hr />
+  <button @click="getList">获取频道数据</button>
+  <div v-for="item in channelList" :key="item.id">{{ item.name }}</div>
+</template>
 
+<script setup>
+import { storeToRefs } from "pinia";
+import SonCom1 from "./components/SonCom1.vue";
+import SonCom2 from "./components/SonCom2.vue";
+import { useChannelStore } from "./store/channel";
+import { useCounterStore } from "./store/counter";
+
+const { count, msg } = storeToRefs(useCounterStore());
+const ChannelStore = useChannelStore();
+const { channelList } = storeToRefs(ChannelStore);
+const { getList } = ChannelStore;
+</script>
+
+<style scoped></style>
+```
+## 4. getters实现
 Pinia中的 getters 直接使用 computed函数 进行模拟, 组件中需要使用需要把 getters return出去
 
 ![image.png](assets/33.png)
-
-
-
 ## 5. action异步实现
-
 方式：异步action函数的写法和组件中获取异步数据的写法完全一致
-
 - 接口地址：http://geek.itheima.net/v1_0/channels
-
 - 请求方式：get
-
 - 请求参数：无
 
 ![image.png](assets/34.png)
-
 需求：在Pinia中获取频道列表数据并把数据渲染App组件的模板中
+
 ![image.png](assets/35.png)
-
-
-
-
-
 ## 6. storeToRefs工具函数
-
 使用storeToRefs函数可以辅助保持数据（state + getter）的响应式解构
+
 ![image.png](assets/36.png)
-
-
-
 ## 7. Pinia的调试
-
 Vue官方的 dev-tools 调试工具 对 Pinia直接支持，可以直接进行调试
+
 ![image.png](assets/37.png)
-
-
-
-
-
 ## 8. Pinia持久化插件
-
-官方文档：https://prazdevs.github.io/pinia-plugin-persistedstate/zh/
+>官方文档：https://prazdevs.github.io/pinia-plugin-persistedstate/zh/
 
 1. 安装插件 pinia-plugin-persistedstate
 
-```jsx
+```shell
 npm i pinia-plugin-persistedstate
 ```
 
-2. 使用 main.js
+2. 在main.js中导入并在pinia中使用
 
 ```jsx
-import persist from 'pinia-plugin-persistedstate'
-...
-app.use(createPinia().use(persist))
+import { createPinia } from 'pinia'
+import piniaPluginPersistedstate from 'pinia-plugin-persistedstate'
+
+const pinia = createPinia()
+pinia.use(piniaPluginPersistedstate)
 ```
 
 3. 配置 store/counter.js
-
-```jsx
+- 选项式API
+```js
 import { defineStore } from 'pinia'
-import { computed, ref } from 'vue'
 
-export const useCounterStore = defineStore('counter', () => {
-  ...
-  return {
-    count,
-    doubleCount,
-    increment
-  }
-}, {
-  persist: true
+export const useStore = defineStore('main', {
+  state: () => {
+    return {
+      someState: 'hello pinia',
+    }
+  },
+  persist: true,
 })
 ```
+- 组合式API
+```jsx
+import { defineStore } from 'pinia'
+import { ref } from 'vue'
 
-4. 其他配置，看官网文档即可
+export const useStore = defineStore(
+  'main',
+  () => {
+    const someState = ref('hello pinia')
+    return { someState }
+  },
+  {
+    persist: true,
+  },
+)
+```
+>默认还是使用localStorage进行持久化,相当于之前手写的封装,默认使用`store.$id`(即仓库的名字)作为key持久化整个仓库
 
- 
+4. 自定义选项
+有些配置可以自己更改,只需要在persist属性中配置即可,可用属性有
+- `key:'my-custom-key`修改key的值
+- `storage:sessionStorage` 修改存储方式,可以是任何一个具有getItem和setItem方法的对象
+- `path:['<属性名1>',...]` 指定具体需要持久化的属性,如`user.id`,`count`等,`[]`表示不持久化任何数据
+- ...
+
+>把原先的persist:true改为persist:{},不用在传true了
+- 选项式APi
+```js
+import { defineStore } from 'pinia'
+
+export const useStore = defineStore('main', {
+  state: () => ({
+    someState: 'hello pinia',
+  }),
+  persist: {
+    // CONFIG OPTIONS HERE
+  },
+})
+```
+- 组合式API
+```js
+import { defineStore } from 'pinia'
+import { ref } from 'vue'
+
+export const useStore = defineStore('main', () => {
+  const someState = ref('hello pinia')
+  return { someState }
+}, {
+  persist: {
+    // CONFIG OPTIONS HERE
+  }
+})
+```
+# pnpm 包管理器
+一些优势：比同类工具快 2倍 左右、节省磁盘空间... [https://www.pnpm.cn/](https://www.pnpm.cn/)
+安装方式：
+`npm install -g pnpm
+创建项目：
+`pnpm create vue
+
+![[Pasted image 20250906172534.png]]
+# 基于 husky 的代码检查工作流
+husky 是一个 git hooks 工具 ( git的钩子工具，可以在特定时机执行特定的命令 )
+**husky 配置**
+1. git初始化 git init
+2. 初始化 husky 工具配置 [https://typicode.github.io/husky/](https://typicode.github.io/husky/)
+	`pnpm dlx husky-init`
+	`pnpm install`
+>之后会生成一个.husky文件夹,里边有相关的配置
+3. 修改 .husky/pre-commit 文件
+```shell
+#!/usr/bin/env sh
+. "$(dirname -- "$0")/_/husky.sh"
+
+# npm test --删除这一行
+pnpm lint # 换成这个
+```
+**问题**：默认进行的是全量检查，耗时问题，历史问题。
+>本质就是在每次提交git时执行这个命令,这个命令在package.json里是定义好的,类似`pnpm dev`
+```json
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "lint": "eslint . --fix",
+    "format": "prettier --write src/",
+    "prepare": "husky install"
+  },
+```
+**lint-staged 配置**(暂存区eslint校验)
+>用这个是因为之前的全量检查会因为之前的或者别人的代码导致自己的也提交不上去,所以用这个只关注于当前的提交内容
+4. 安装
+	`pnpm i lint-staged -D`
+5. 配置 `package.json`
+```js
+{  
+  // ... 省略 ...  加在对象的第一层,和原先的内容并列
+  "lint-staged": {  
+    "*.{js,ts,vue}": [  
+      "eslint --fix"  
+    ]  
+  }  
+}  
+​  
+{  
+  "scripts": {  
+    // ... 省略 ...  
+    "lint-staged": "lint-staged"  
+  }  
+}
+```
+6. 修改 .husky/pre-commit 文件(和上边的那个只用留一个,效果是一样的)
+    `pnpm lint-staged`
+# 调整项目目录
+默认生成的目录结构不满足我们的开发需求，所以这里需要做一些自定义改动。主要是两个工作：
+- 删除初始化的默认文件
+- 修改剩余代码内容
+- 新增调整我们需要的目录结构
+- 拷贝初始化资源文件，安装预处理器插件
+	1. 删除文件
+	2. 修改内容
+`src/router/index.js`
+```js
+import { createRouter, createWebHistory } from 'vue-router'  
+​  
+const router = createRouter({  
+  history: createWebHistory(import.meta.env.BASE_URL),  
+  routes: []  
+})  
+​  
+export default router
+```
+`src/App.vue`
+```vue
+<script setup></script>  
+​  
+<template>  
+  <div>  
+    <router-view></router-view>  
+  </div>  
+</template>  
+​  
+<style scoped></style>
+```
+`src/main.js`
+```js
+import { createApp } from 'vue'  
+import { createPinia } from 'pinia'  
+​  
+import App from './App.vue'  
+import router from './router'  
+​  
+const app = createApp(App)  
+​  
+app.use(createPinia())  
+app.use(router)  
+app.mount('#app')
+```
+	3. 新增需要目录 api utils
+
+![](file://D:\BaiduNetdiskDownload\JavaScript\Vue2+3入门到实战-配套资料\02-MD笔记\11-day12-day14-大事件管理系统\assets\image-20230710215822678.png?lastModify=1757331255)
+	4. 将项目需要的全局样式 和 图片文件，复制到 assets 文件夹中, 并将全局样式在main.js中引入
+`import '@/assets/main.scss'`
+最后的结构
+
+![[Pasted image 20250908194618.png]]
+# VueRouter4 路由代码解析
+>在组合式API中,因为拿不到this,$router也拿不到了,所以要用的时候使用useRouter()方法来获取并接收使用,获取路由参数的route也使用useRoute()来获取
+
+对比
+
+![[Pasted image 20250908194949.png]]
+基础代码解析
+```js
+import { createRouter, createWebHistory } from 'vue-router'
+
+// createRouter 创建路由实例，===> new VueRouter()
+// 1. history模式: createWebHistory()   http://xxx/user
+// 2. hash模式: createWebHashHistory()  http://xxx/#/user
+
+// vite 的配置 import.meta.env.BASE_URL 是路由的基准地址，默认是 ’/‘
+// https://vitejs.dev/guide/build.html#public-base-path
+
+// 如果将来你部署的域名路径是：http://xxx/my-path/user
+// vite.config.ts  添加配置  base: my-path，路由这就会加上 my-path 前缀了
+
+const router = createRouter({
+  history: createWebHistory(import.meta.env.BASE_URL),
+  routes: []
+})
+
+export default router
+```
+>import.meta.env.BASE_URL 是Vite 环境变量：[https://cn.vitejs.dev/guide/env-and-mode.html](https://cn.vitejs.dev/guide/env-and-mode.html)
+```js
+export default defineConfig({
+  plugins: [vue(), vueDevTools()],
+  base: '/test', //这个就是对应那个参数,默认没有,就是'/'
+  resolve: {
+    alias: {
+      '@': fileURLToPath(new URL('./src', import.meta.url)),
+    },
+  },
+})
+```
+# 引入 element-ui 组件库
+>官方文档： https://element-plus.org/zh-CN/
+
+安装
+```shell
+pnpm add element-plus
+```
+## 自动按需导入
+安装插件
+```shell
+pnpm add -D unplugin-vue-components unplugin-auto-import
+```
+然后把下列代码插入到你的 Vite 或 Webpack 的配置文件中
+```js
+...
+import AutoImport from 'unplugin-auto-import/vite'
+import Components from 'unplugin-vue-components/vite'
+import { ElementPlusResolver } from 'unplugin-vue-components/resolvers'
+​
+// https://vitejs.dev/config/
+export default defineConfig({
+  plugins: [
+    ...
+    AutoImport({
+      resolvers: [ElementPlusResolver()]
+    }),
+    Components({
+      resolvers: [ElementPlusResolver()]
+    })
+  ]
+})
+```
+直接使用组件即可
+```vue
+<template>
+  <div>
+    <el-button type="primary">Primary</el-button>
+    <el-button type="success">Success</el-button>
+    <el-button type="info">Info</el-button>
+    <el-button type="warning">Warning</el-button>
+    <el-button type="danger">Danger</el-button>
+    ...
+  </div>
+</template>
+```
+>彩蛋：默认 components 下的文件也会被自动注册,也就是说自定义组件也不用导入了
+# Pinia - 配置仓库统一管理
+pinia 独立维护
+- 现在：初始化代码在 main.js 中，仓库代码在 stores 中，代码分散职能不单一
+- 优化：由 stores 统一维护，在 stores/index.js 中完成 pinia 初始化，交付 main.js 使用
+仓库 统一导出
+- 现在：使用一个仓库 import { useUserStore } from `./stores/user.js` 不同仓库路径不一致
+- 优化：由 stores/index.js 统一导出，导入路径统一 `./stores`，而且仓库维护在 stores/modules 中
+	**index.js**
+```js
+import { createPinia } from 'pinia'
+import piniaPluginPersistedstate from 'pinia-plugin-persistedstate'
+
+const pinia = createPinia()
+pinia.use(piniaPluginPersistedstate)
+
+export default pinia
+
+export * from './user'
+```
