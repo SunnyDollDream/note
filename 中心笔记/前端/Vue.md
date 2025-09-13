@@ -2219,10 +2219,8 @@ export default {
 ```
 ## props校验
 ### 作用
-
 为组件的 prop 指定**验证要求**，不符合要求，控制台就会有**错误提示**  → 帮助开发者，快速发现错误
 ### 语法
-
 - **类型校验**
 - 非空校验
 - 默认值
@@ -2230,9 +2228,7 @@ export default {
 
 ![[Pasted image 20250726235700.png]]
 ### 代码演示
-
 App.vue
-
 ```vue
 <template>
   <div class="app">
@@ -2257,9 +2253,7 @@ export default {
 <style>
 </style>
 ```
-
 BaseProgress.vue
-
 ```vue
 <template>
   <div class="base-progress">
@@ -3231,30 +3225,20 @@ export default {
 </style>
 ```
 ## 插槽-默认插槽
-
 ### 作用
-
 让组件内部的一些 **结构** 支持 **自定义**
 
 ![[Pasted image 20250801190638.png]]
 ### 需求
-
 将需要多次显示的对话框,封装成一个组件
-### 问题
-
-组件的内容部分，**不希望写死**，希望能使用的时候**自定义**。怎么办
-
 ### 插槽的基本语法
-
-1. 组件内需要定制的结构部分，改用**<slot></slot>**占位
-2. 使用组件时, **<MyDialog></MyDialog>**标签内部, 传入结构替换slot
+1. 组件内需要定制的结构部分，改用`<slot></slot>`占位
+2. 使用组件时, `<MyDialog></MyDialog>`标签内部, 传入结构替换slot
 3. 给插槽传入内容时，可以传入**纯文本、html标签、组件**
 
 ![[Pasted image 20250801190742.png]]
 ### 代码示例
-
 MyDialog.vue
-
 ```vue
 <template>
   <div class="dialog">
@@ -3334,9 +3318,7 @@ export default {
 }
 </style>
 ```
-
 App.vue
-
 ```vue
 <template>
   <div>
@@ -3368,52 +3350,36 @@ body {
 ```
 >在组件内需要插槽的地方写上slot标签,在外部使用组件的时候在组件内部写入内容即可填充到slot标签的位置,支持html
 ## 插槽-后备内容（默认值）
-
 ### 问题
-
 通过插槽完成了内容的定制，传什么显示什么, 但是如果不传，则是空白
 
 ![[Pasted image 20250801191705.png]]
 能否给插槽设置 默认显示内容 呢？
-
 ### 插槽的后备内容
-
 封装组件时，可以为预留的 `<slot>` 插槽提供后备内容（默认内容）。
-
 ### 语法
-
 在 `<slot>` 标签内，放置内容, 作为默认显示内容
 
 ![[Pasted image 20250801191727.png]]
 ### 效果
-
 - 外部使用组件时，不传东西，则slot会显示后备内容 
-
 - 外部使用组件时，传东西了，则slot整体会被换掉
 ## 插槽-具名插槽
-
 ### 需求
-
 一个组件内有多处结构，需要外部传入标签，进行定制 
 
 ![[Pasted image 20250801192042.png]]
-
 上面的弹框中有**三处不同**，但是**默认插槽**只能**定制一个位置**，这时候怎么办呢?
-
 ### 具名插槽语法
-
 - 多个slot使用name属性区分名字 
 
 ![[Pasted image 20250801192103.png]]
-
 - 在外部组件中使用template配合v-slot:名字来分发对应标签
 
   ![[Pasted image 20250801192112.png]]
 >使用了name的slot必须使用v-slot分发内容,不写不会传入任何一个具名插槽
 ### v-slot的简写
-
 v-slot写起来太长，vue给我们提供一个简单写法 **v-slot —> #**
-
 MyDialog.vue
 ```vue
 <template>
@@ -3431,9 +3397,7 @@ MyDialog.vue
   </div>
 </template>
 ```
-
 App.vue
-
 ```vue
 <template>
   <div>
@@ -3445,41 +3409,27 @@ App.vue
   </div>
 </template>
 ```
-
 ## 作用域插槽
-
 ### 插槽分类
-
 - 默认插槽
-
 - 具名插槽
-
   >插槽只有两种，作用域插槽不属于插槽的一种分类
-
 ### 作用
-
 定义slot 插槽的同时, 是可以**传值**的。给 **插槽** 上可以 **绑定数据**，将来 **使用组件时可以用**
 >作用域绑定了父组件传下来的数据的一部分在传上去时可以使用v-mode直接进行双向绑定
 ### 场景
-
 封装表格组件
-
 ### 使用步骤
-
 1. 给 slot 标签, 以 添加属性的方式传值
-
    ```vue
    <slot :id="item.id" msg="测试文本"></slot>
    ```
-
 2. 所有添加的属性, 都会被收集到一个对象中
-
    ```vue
    { id: 3, msg: '测试文本' }
    ```
 >不论传一个还是多个都会被封装为一个对象
 3. 在template中, 通过  ` #插槽名= "obj"` 接收，默认插槽名为 default
-
    ```vue
    <MyTable :list="list">
      <template #default="obj">
@@ -3489,9 +3439,7 @@ App.vue
    ```
 >用obj.<子组件中向上传递的变量名>访问对应属性
 ### 代码示例
-
 MyTable.vue
-
 ```vue
 <template>
   <table class="my-table">
@@ -3566,9 +3514,7 @@ export default {
 }
 </style>
 ```
-
 App.vue
-
 ```vue
 <template>
   <div>
@@ -3617,7 +3563,6 @@ export default {
 }
 </script>
 ```
-
 ## 单页应用程序介绍
 
 ### 概念
@@ -10936,8 +10881,6 @@ createApp(App).mount('#app')
 >使用setup导入的基本类型也不是响应式的了,需要用ref返回一个响应式的对象
 ## 1. reactive
 > 接受对象类型数据的参数传入并返回一个响应式的对象
-
-
 ```vue
 <script setup>
  // 导入
@@ -10957,11 +10900,9 @@ createApp(App).mount('#app')
   <button @click="setState">change msg</button>
 </template>
 ```
-
 ## 2. ref
 > 接收简单类型或者对象类型的数据传入并返回一个响应式的==对象==(在原有传入数据的基础上包了一层对象,再借助reactive实现响应式,==即使传入的是对象也还是会再封装一层==,其中的.value就是你传入的参数)
 > 但是这个.value只是在脚本中需要调用,在模版中直接写<对象>.<值>即可
-
 ```vue
 <script setup>
  // 导入
@@ -10979,7 +10920,6 @@ createApp(App).mount('#app')
 </template>
 ```
 ## 3. reactive 对比 ref
-
 1. 都是用来生成响应式数据
 2. 不同点
    1. reactive不能处理简单类型的数据
@@ -10989,7 +10929,6 @@ createApp(App).mount('#app')
    1. 推荐使用ref函数，减少记忆负担，小兔鲜项目都使用ref
 # 组合式API - computed
 > 计算属性基本思想和Vue2保持一致，组合式API下的计算属性只是修改了API写法
-
 ```vue
 <script setup>
 // 导入
@@ -11098,12 +11037,12 @@ watch(()
 # 组合式API - 生命周期函数
 ![[Pasted image 20250902220702.png]]
 ## 1. 选项式对比组合式
+
 ![[Pasted image 20250902211628.png]]
 其中beforeUnmount和unmounted对应Vue2中的beforeDestory和destoryed
 ## 2. 生命周期函数基本使用
 > 1. 导入生命周期函数
 > 2. 执行生命周期函数，传入回调
-
 ```vue
 <scirpt setup>
 import { onMounted } from 'vue'
@@ -11114,7 +11053,6 @@ onMounted(()=>{
 ```
 ## 3. 执行多次
 > 生命周期函数执行多次的时候，会按照顺序依次执行
-
 ```vue
 <scirpt setup>
 import { onMounted } from 'vue'
@@ -11676,6 +11614,15 @@ export default defineConfig({
 </template>
 ```
 >彩蛋：默认 components 下的文件也会被自动注册,也就是说自定义组件也不用导入了
+
+还有一个element-plus的图标库,要是用的话也可以装
+```shell
+pnpm i @element-plus/icons-vue
+```
+要自动按需导入还得安装一个插件
+```shell
+pnpm i -D unplugin-icons
+```
 # Pinia - 配置仓库统一管理
 pinia 独立维护
 - 现在：初始化代码在 main.js 中，仓库代码在 stores 中，代码分散职能不单一
