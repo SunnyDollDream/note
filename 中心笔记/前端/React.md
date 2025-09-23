@@ -162,6 +162,7 @@ function App(){
 }
 ```
 # React的事件绑定
+>react绑定的回调函数不能直接调用传参,想要传参的话就必须写lambda表达式,在返回值中传参
 ## 基础实现
 > React中的事件绑定，通过语法 `on + 事件名称 = { 事件处理程序 }`，整体上遵循驼峰命名法
 
@@ -228,6 +229,8 @@ function App(){
 function Button(){
   return <button>click me</button>
 }
+// 表达式写法也是可以的
+const Button = () => <button>click me</button>
 
 // 2. 使用组件
 function App(){
@@ -241,12 +244,15 @@ function App(){
   )
 }
 ```
+
 # 组件状态管理-useState
 ## 基础使用
 > useState 是一个 React Hook（函数），它允许我们向组件添加一个`状态变量`, 从而控制影响组件的渲染结果
 > 和普通JS变量不同的是，状态变量一旦发生变化组件的视图UI也会跟着变化（数据驱动视图）
+> 就类似vue把数据添加到了pinia中,需要通过方法修改,具有响应式
 
 ![image.png](assets/08.png)
+调用useState(val)即可获得val的响应式对象和修改方法,返回的是一个数组
 ```jsx
 function App(){
   const [ count, setCount ] = React.useState(0)
@@ -258,13 +264,15 @@ function App(){
 }
 ```
 ## 状态的修改规则
-> 在React中状态被认为是只读的，我们应该始终`替换它而不是修改它`, 直接修改状态不能引发视图更新
+> 在React中状态被认为是只读的，我们应该始终`替换它而不是修改它`,即==状态不可变== 直接修改状态不能引发视图更新
 
 ![image.png](assets/09.png)
+直接修改count是可以生效的,但是视图不会刷新,即count的值确实发生了变化,但是视图没有刷新,此时如果调用set(count+1)视图会显示count的实际值+1的结果
 ## 修改对象状态
 > 对于对象类型的状态变量，应该始终给set方法一个`全新的对象` 来进行修改
 
-![image.png](assets/10.png)
+![[Pasted image 20250923195824.png]]
+其实还是传进来什么count就会被修改成什么,这里就算写一个数字还是可以正确执行的,这种修改方式实际上是在想要修改当前对象的某个属性时使用的
 # 组件的基础样式处理
 > React组件基础的样式控制有俩种方式，行内样式和class类名控制
 
@@ -289,660 +297,263 @@ function App(){
   )
 }
 ```
-# B站评论案例
-![image.png](assets/11.png)
-
-1. 渲染评论列表
-2. 删除评论实现
-3. 渲染导航Tab和高亮实现
-4. 评论列表排序功能实现
-## 基础模版
-```tsx
-import { useState } from 'react'
-import './App.scss'
-import avatar from './images/bozai.png'
-
-/**
- * 评论列表的渲染和操作
- *
- * 1. 根据状态渲染评论列表
- * 2. 删除评论
- */
-
-// 评论列表数据
-const defaultList = [
-  {
-    // 评论id
-    rpid: 3,
-    // 用户信息
-    user: {
-      uid: '13258165',
-      avatar: '',
-      uname: '周杰伦',
-    },
-    // 评论内容
-    content: '哎哟，不错哦',
-    // 评论时间
-    ctime: '10-18 08:15',
-    like: 88,
-  },
-  {
-    rpid: 2,
-    user: {
-      uid: '36080105',
-      avatar: '',
-      uname: '许嵩',
-    },
-    content: '我寻你千百度 日出到迟暮',
-    ctime: '11-13 11:29',
-    like: 88,
-  },
-  {
-    rpid: 1,
-    user: {
-      uid: '30009257',
-      avatar,
-      uname: '黑马前端',
-    },
-    content: '学前端就来黑马',
-    ctime: '10-19 09:00',
-    like: 66,
-  },
-]
-// 当前登录用户信息
-const user = {
-  // 用户id
-  uid: '30009257',
-  // 用户头像
-  avatar,
-  // 用户昵称
-  uname: '黑马前端',
-}
-
-/**
- * 导航 Tab 的渲染和操作
- *
- * 1. 渲染导航 Tab 和高亮
- * 2. 评论列表排序
- *  最热 => 喜欢数量降序
- *  最新 => 创建时间降序
- */
-
-// 导航 Tab 数组
-const tabs = [
-  { type: 'hot', text: '最热' },
-  { type: 'time', text: '最新' },
-]
-
-const App = () => {
-  return (
-    <div className="app">
-      {/* 导航 Tab */}
-      <div className="reply-navigation">
-        <ul className="nav-bar">
-          <li className="nav-title">
-            <span className="nav-title-text">评论</span>
-            {/* 评论数量 */}
-            <span className="total-reply">{10}</span>
-          </li>
-          <li className="nav-sort">
-            {/* 高亮类名： active */}
-            <span className='nav-item'>最新</span>
-            <span className='nav-item'>最热</span>
-          </li>
-        </ul>
-      </div>
-
-      <div className="reply-wrap">
-        {/* 发表评论 */}
-        <div className="box-normal">
-          {/* 当前用户头像 */}
-          <div className="reply-box-avatar">
-            <div className="bili-avatar">
-              <img className="bili-avatar-img" src={avatar} alt="用户头像" />
-            </div>
-          </div>
-          <div className="reply-box-wrap">
-            {/* 评论框 */}
-            <textarea
-              className="reply-box-textarea"
-              placeholder="发一条友善的评论"
-            />
-            {/* 发布按钮 */}
-            <div className="reply-box-send">
-              <div className="send-text">发布</div>
-            </div>
-          </div>
-        </div>
-        {/* 评论列表 */}
-        <div className="reply-list">
-          {/* 评论项 */}
-          <div className="reply-item">
-            {/* 头像 */}
-            <div className="root-reply-avatar">
-              <div className="bili-avatar">
-                <img
-                  className="bili-avatar-img"
-                  alt=""
-                />
-              </div>
-            </div>
-
-            <div className="content-wrap">
-              {/* 用户名 */}
-              <div className="user-info">
-                <div className="user-name">jack</div>
-              </div>
-              {/* 评论内容 */}
-              <div className="root-reply">
-                <span className="reply-content">这是一条评论回复</span>
-                <div className="reply-info">
-                  {/* 评论时间 */}
-                  <span className="reply-time">{'2023-11-11'}</span>
-                  {/* 评论数量 */}
-                  <span className="reply-time">点赞数:{100}</span>
-                  <span className="delete-btn">
-                    删除
-                  </span>
-
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  )
-}
-
-export default App
-```
-
-```css
-.app {
-  width: 80%;
-  margin: 50px auto;
-}
-
-.reply-navigation {
-  margin-bottom: 22px;
-
-  .nav-bar {
-    display: flex;
-    align-items: center;
-    margin: 0;
-    padding: 0;
-    list-style: none;
-
-    .nav-title {
-      display: flex;
-      align-items: center;
-      width: 114px;
-      font-size: 20px;
-
-      .nav-title-text {
-        color: #18191c;
-        font-weight: 500;
-      }
-      .total-reply {
-        margin: 0 36px 0 6px;
-        color: #9499a0;
-        font-weight: normal;
-        font-size: 13px;
-      }
-    }
-
-    .nav-sort {
-      display: flex;
-      align-items: center;
-      color: #9499a0;
-      font-size: 13px;
-
-      .nav-item {
-        cursor: pointer;
-
-        &:hover {
-          color: #00aeec;
-        }
-
-        &:last-child::after {
-          display: none;
-        }
-        &::after {
-          content: ' ';
-          display: inline-block;
-          height: 10px;
-          width: 1px;
-          margin: -1px 12px;
-          background-color: #9499a0;
-        }
-      }
-
-      .nav-item.active {
-        color: #18191c;
-      }
-    }
-  }
-}
-
-.reply-wrap {
-  position: relative;
-}
-.box-normal {
-  display: flex;
-  transition: 0.2s;
-
-  .reply-box-avatar {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 80px;
-    height: 50px;
-  }
-
-  .reply-box-wrap {
-    display: flex;
-    position: relative;
-    flex: 1;
-
-    .reply-box-textarea {
-      width: 100%;
-      height: 50px;
-      padding: 5px 10px;
-      box-sizing: border-box;
-      color: #181931;
-      font-family: inherit;
-      line-height: 38px;
-      background-color: #f1f2f3;
-      border: 1px solid #f1f2f3;
-      border-radius: 6px;
-      outline: none;
-      resize: none;
-      transition: 0.2s;
-
-      &::placeholder {
-        color: #9499a0;
-        font-size: 12px;
-      }
-      &:focus {
-        height: 60px;
-        background-color: #fff;
-        border-color: #c9ccd0;
-      }
-    }
-  }
-
-  .reply-box-send {
-    position: relative;
-    display: flex;
-    flex-basis: 86px;
-    align-items: center;
-    justify-content: center;
-    margin-left: 10px;
-    border-radius: 4px;
-    cursor: pointer;
-    transition: 0.2s;
-
-    & .send-text {
-      position: absolute;
-      z-index: 1;
-      color: #fff;
-      font-size: 16px;
-    }
-    &::after {
-      position: absolute;
-      width: 100%;
-      height: 100%;
-      background-color: #00aeec;
-      border-radius: 4px;
-      opacity: 0.5;
-      content: '';
-    }
-    &:hover::after {
-      opacity: 1;
-    }
-  }
-}
-.bili-avatar {
-  position: relative;
-  display: block;
-  width: 48px;
-  height: 48px;
-  margin: 0;
-  padding: 0;
-  border-radius: 50%;
-}
-.bili-avatar-img {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  display: block;
-  width: 48px;
-  height: 48px;
-  object-fit: cover;
-  border: none;
-  border-radius: 50%;
-  image-rendering: -webkit-optimize-contrast;
-  transform: translate(-50%, -50%);
-}
-
-// 评论列表
-.reply-list {
-  margin-top: 14px;
-}
-.reply-item {
-  padding: 22px 0 0 80px;
-  .root-reply-avatar {
-    position: absolute;
-    left: 0;
-    display: flex;
-    justify-content: center;
-    width: 80px;
-    cursor: pointer;
-  }
-
-  .content-wrap {
-    position: relative;
-    flex: 1;
-
-    &::after {
-      content: ' ';
-      display: block;
-      height: 1px;
-      width: 100%;
-      margin-top: 14px;
-      background-color: #e3e5e7;
-    }
-
-    .user-info {
-      display: flex;
-      align-items: center;
-      margin-bottom: 4px;
-
-      .user-name {
-        height: 30px;
-        margin-right: 5px;
-        color: #61666d;
-        font-size: 13px;
-        line-height: 30px;
-        cursor: pointer;
-      }
-    }
-
-    .root-reply {
-      position: relative;
-      padding: 2px 0;
-      color: #181931;
-      font-size: 15px;
-      line-height: 24px;
-      .reply-info {
-        position: relative;
-        display: flex;
-        align-items: center;
-        margin-top: 2px;
-        color: #9499a0;
-        font-size: 13px;
-
-        .reply-time {
-          width: 76px;
-          margin-right: 20px;
-        }
-        .reply-like {
-          display: flex;
-          align-items: center;
-          margin-right: 19px;
-
-          .like-icon {
-            width: 14px;
-            height: 14px;
-            margin-right: 5px;
-            color: #9499a0;
-            background-position: -153px -25px;
-            &:hover {
-              background-position: -218px -25px;
-            }
-          }
-          .like-icon.liked {
-            background-position: -154px -89px;
-          }
-        }
-        .reply-dislike {
-          display: flex;
-          align-items: center;
-          margin-right: 19px;
-          .dislike-icon {
-            width: 16px;
-            height: 16px;
-            background-position: -153px -153px;
-            &:hover {
-              background-position: -217px -153px;
-            }
-          }
-          .dislike-icon.disliked {
-            background-position: -154px -217px;
-          }
-        }
-        .delete-btn {
-          cursor: pointer;
-          &:hover {
-            color: #00aeec;
-          }
-        }
-      }
-    }
-  }
-}
-
-.reply-none {
-  height: 64px;
-  margin-bottom: 80px;
-  color: #99a2aa;
-  font-size: 13px;
-  line-height: 64px;
-  text-align: center;
-}
-```
-## 完成版本
+## classnames
+想要动态处理css样式的话,可以使用格式字符串写上类名,需要判断是否添加的类名的处理逻辑和元素一致
 ```jsx
- import { useState } from 'react'
-import './App.scss'
-import avatar from './images/bozai.png'
-import orderBy from 'lodash/orderBy'
+<span
+  className={`nav-item ${refType === tab.type && 'active'}`} 
+  key={tab.type}
+  onClick={()=>handleSort(tab.type)}
+>
+  {tab.text}
+</span>
+```
+但是这样很不直观并且容易出错,所以可以使用classnames类库进行类名控制
+```shell
+npm i classnames
+```
 
-/**
- * 评论列表的渲染和操作
- *
- * 1. 根据状态渲染评论列表
- * 2. 删除评论
- */
+```jsx
+<span
+  className={} 
+  key={tab.type}
+  onClick={classNames('nav-item', { active: tab.type === refType} )}
+>
+  {tab.text}
+</span>
+```
+这里的active为需要判断的类名,不需要加引号,后边跟的是判断条件,如果还有需要控制的类名则接着往后写{},{}...即可
+# React表单控制
+## 受控绑定
+> 概念：使用React组件的状态（useState）控制表单的状态,即将state绑定到表单的value上
 
-// 评论列表数据
-const defaultList = [
-  {
-    // 评论id
-    rpid: 3,
-    // 用户信息
-    user: {
-      uid: '13258165',
-      avatar: '',
-      uname: '周杰伦',
-    },
-    // 评论内容
-    content: '哎哟，不错哦',
-    // 评论时间
-    ctime: '10-18 08:15',
-    like: 88,
-  },
-  {
-    rpid: 2,
-    user: {
-      uid: '36080105',
-      avatar: '',
-      uname: '许嵩',
-    },
-    content: '我寻你千百度 日出到迟暮',
-    ctime: '11-13 11:29',
-    like: 88,
-  },
-  {
-    rpid: 1,
-    user: {
-      uid: '30009257',
-      avatar,
-      uname: '黑马前端',
-    },
-    content: '学前端就来黑马',
-    ctime: '10-19 09:00',
-    like: 66,
-  },
-]
-// 当前登录用户信息
-const user = {
-  // 用户id
-  uid: '30009257',
-  // 用户头像
-  avatar,
-  // 用户昵称
-  uname: '黑马前端',
+![[Pasted image 20250923220100.png]]
+之后再监听change事件实现==双向绑定==的效果
+```jsx
+function App(){
+  const [value, setValue] = useState('')
+  return (
+    <input 
+      type="text" 
+      value={value} 
+      onChange={e => setValue(e.target.value)}
+    />
+  )
+}
+```
+## 非受控绑定
+> 概念：通过获取DOM的方式获取表单的输入数据
+
+![[Pasted image 20250923222448.png]]
+%%直接打印ref对象和打印current属性%%
+React中获取和操作DOM需要使用==useRef==钩子,使用方法类似vue,但是react直接获取到的不是DOM对象本身,而是包含DOM对象的一个对象,需要使用current属性访问DOM对象,但是也需要DOM可用时才能访问,即DOM渲染出来之后才能使用
+```jsx
+function App(){
+  const inputRef = useRef(null) // 1.创建ref对象
+
+  const onChange = ()=>{
+    console.log(inputRef.current.value) // 3.通过ref对象的current属性获取DOM对象
+  }
+  
+  return (
+    <input 
+      type="text" 
+      ref={inputRef} // 2.与ref对象绑定
+      onChange={onChange}
+    />
+  )
+}
+```
+# uuid
+>用于生成唯一id
+```shell
+npm i uuid
+```
+安装之后导入(因为原先的命名就叫v4所以建议改名)
+```jsx
+import { v4 as uuidv4 } from 'uuid'
+```
+调用uuidv4()就可以获取一个唯一id(82bdf4ac-8a54-4737-a103-27f528d20d48)
+# day.js
+>时间处理
+```shell
+npm i dayjs
+```
+调用format方法
+>根据传入的占位符返回格式化后的日期。
+>将字符放在方括号中，即可原样返回而不被格式化替换 (例如， `[MM]`)。
+```jsx
+dayjs().format() 
+// 默认返回的是 ISO8601 格式字符串 '2020-04-02T08:02:17-05:00'
+
+dayjs('2019-01-25').format('[YYYYescape] YYYY-MM-DDTHH:mm:ssZ[Z]') 
+// 'YYYYescape 2019-01-25T00:00:00-02:00Z'
+
+dayjs('2019-01-25').format('DD/MM/YYYY') 
+// '25/01/2019'
+
+dayjs(new Date()).format()
+//获取当前时间并格式化
+```
+# React组件通信
+> 概念：组件通信就是`组件之间的数据传递`, 根据组件嵌套关系的不同，有不同的通信手段和方法
+
+![[Pasted image 20250923220123.png]]
+
+1. A-B 父子通信
+2. B-C 兄弟通信
+3. A-E 跨层通信
+# 父子通信-父传子
+![[Pasted image 20250923220128.png]]
+## 基础实现
+**实现步骤 **
+1. 父组件传递数据 - 在子组件标签上绑定属性 
+2. 子组件接收数据 - 子组件通过props参数接收数据
+```jsx
+function Son(props){
+  return <div>{ props.name }</div>
 }
 
-/**
- * 导航 Tab 的渲染和操作
- *
- * 1. 渲染导航 Tab 和高亮
- * 2. 评论列表排序
- *  最热 => 喜欢数量降序
- *  最新 => 创建时间降序
- */
 
-// 导航 Tab 数组
-const tabs = [
-  { type: 'hot', text: '最热' },
-  { type: 'time', text: '最新' },
-]
-
-const App = () => {
-  // 导航 Tab 高亮的状态
-  const [activeTab, setActiveTab] = useState('hot')
-  const [list, setList] = useState(defaultList)
-
-  // 删除评论
-  const onDelete = rpid => {
-    // 如果要删除数组中的元素，需要调用 filter 方法，并且一定要调用 setList 才能更新状态
-    setList(list.filter(item => item.rpid !== rpid))
-  }
-
-  // tab 高亮切换
-  const onToggle = type => {
-    setActiveTab(type)
-    let newList
-    if (type === 'time') {
-      // 按照时间降序排序
-      // orderBy(对谁进行排序, 按照谁来排, 顺序)
-      newList = orderBy(list, 'ctime', 'desc')
-    } else {
-      // 按照喜欢数量降序排序
-      newList = orderBy(list, 'like', 'desc')
-    }
-    setList(newList)
-  }
-
+function App(){
+  const name = 'this is app name'
   return (
-    <div className="app">
-      {/* 导航 Tab */}
-      <div className="reply-navigation">
-        <ul className="nav-bar">
-          <li className="nav-title">
-            <span className="nav-title-text">评论</span>
-            {/* 评论数量 */}
-            <span className="total-reply">{list.length}</span>
-          </li>
-          <li className="nav-sort">
-            {/* 高亮类名： active */}
-            {tabs.map(item => {
-              return (
-                <div
-                  key={item.type}
-                  className={
-                    item.type === activeTab ? 'nav-item active' : 'nav-item'
-                  }
-                  onClick={() => onToggle(item.type)}
-                >
-                  {item.text}
-                </div>
-              )
-            })}
-          </li>
-        </ul>
-      </div>
+    <div>
+       <Son name={name}/>
+    </div>
+  )
+}
+```
+## props说明
+**props可以传递任意的合法数据**，比如数字、字符串、布尔值、数组、对象、函数、JSX
+![[Pasted image 20250923220134.png]]
+**props是只读对象**
+子组件只能读取props中的数据，不能直接进行修改, 父组件的数据只能由父组件修改 
 
-      <div className="reply-wrap">
-        {/* 发表评论 */}
-        <div className="box-normal">
-          {/* 当前用户头像 */}
-          <div className="reply-box-avatar">
-            <div className="bili-avatar">
-              <img className="bili-avatar-img" src={avatar} alt="用户头像" />
-            </div>
-          </div>
-          <div className="reply-box-wrap">
-            {/* 评论框 */}
-            <textarea
-              className="reply-box-textarea"
-              placeholder="发一条友善的评论"
-            />
-            {/* 发布按钮 */}
-            <div className="reply-box-send">
-              <div className="send-text">发布</div>
-            </div>
-          </div>
-        </div>
-        {/* 评论列表 */}
-        <div className="reply-list">
-          {/* 评论项 */}
-          {list.map(item => {
-            return (
-              <div key={item.rpid} className="reply-item">
-                {/* 头像 */}
-                <div className="root-reply-avatar">
-                  <div className="bili-avatar">
-                    <img
-                      className="bili-avatar-img"
-                      src={item.user.avatar}
-                      alt=""
-                    />
-                  </div>
-                </div>
+## 特殊的prop-chilren
+> 场景：当我们把内容嵌套在组件的标签内部时，组件会自动在名为children的prop属性中接收该内容
 
-                <div className="content-wrap">
-                  {/* 用户名 */}
-                  <div className="user-info">
-                    <div className="user-name">{item.user.uname}</div>
-                  </div>
-                  {/* 评论内容 */}
-                  <div className="root-reply">
-                    <span className="reply-content">{item.content}</span>
-                    <div className="reply-info">
-                      {/* 评论时间 */}
-                      <span className="reply-time">{item.ctime}</span>
-                      {/* 评论数量 */}
-                      <span className="reply-time">点赞数:{item.like}</span>
-                      {user.uid === item.user.uid && (
-                        <span
-                          className="delete-btn"
-                          onClick={() => onDelete(item.rpid)}
-                        >
-                          删除
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )
-          })}
-        </div>
-      </div>
+![[Pasted image 20250923220138.png]]
+# 父子通信-子传父
+![[Pasted image 20250923220143.png]]
+> 核心思路：在子组件中调用父组件中的函数并传递参数
+
+```tsx
+function Son({ onGetMsg }){
+  const sonMsg = 'this is son msg'
+  return (
+    <div>
+      {/* 在子组件中执行父组件传递过来的函数 */}
+      <button onClick={()=>onGetMsg(sonMsg)}>send</button>
+    </div>
+  )
+}
+
+
+function App(){
+  const getMsg = (msg)=>console.log(msg)
+  
+  return (
+    <div>
+      {/* 传递父组件中的函数到子组件 */}
+       <Son onGetMsg={ getMsg }/>
+    </div>
+  )
+}
+```
+# 兄弟组件通信
+![[Pasted image 20250923220149.png]]
+> 实现思路: 借助 `状态提升` 机制，通过共同的父组件进行兄弟之间的数据传递
+> 1. A组件先通过子传父的方式把数据传递给父组件App
+> 2. App拿到数据之后通过父传子的方式再传递给B组件
+
+```jsx
+
+// 1. 通过子传父 A -> App
+// 2. 通过父传子 App -> B
+
+import { useState } from "react"
+
+function A ({ onGetAName }) {
+  // Son组件中的数据
+  const name = 'this is A name'
+  return (
+    <div>
+      this is A compnent,
+      <button onClick={() => onGetAName(name)}>send</button>
+    </div>
+  )
+}
+
+function B ({ name }) {
+  return (
+    <div>
+      this is B compnent,
+      {name}
+    </div>
+  )
+}
+
+function App () {
+  const [name, setName] = useState('')
+  const getAName = (name) => {
+    setName(name)
+  }
+  return (
+    <div>
+      this is App
+      <A onGetAName={getAName} />
+      <B name={name} />
+    </div>
+  )
+}
+
+export default App
+```
+# 跨层组件通信
+![[Pasted image 20250923220155.png]]
+**实现步骤：**
+
+1. 使用 `createContext`方法创建一个上下文对象Ctx 
+2. 在顶层组件（App）中通过 `Ctx.Provider` 组件提供数据 
+3. 在底层组件（B）中通过 `useContext` 钩子函数获取消费数据
+```jsx
+// App -> A -> B
+
+import { createContext, useContext } from "react"
+
+// 1. createContext方法创建一个上下文对象
+
+const MsgContext = createContext()
+
+function A () {
+  return (
+    <div>
+      this is A component
+      <B />
+    </div>
+  )
+}
+
+function B () {
+  // 3. 在底层组件 通过useContext钩子函数使用数据
+  const msg = useContext(MsgContext)
+  return (
+    <div>
+      this is B compnent,{msg}
+    </div>
+  )
+}
+
+function App () {
+  const msg = 'this is app msg'
+  return (
+    <div>
+      {/* 2. 在顶层组件 通过Provider组件提供数据 */}
+      <MsgContext.Provider value={msg}>
+        this is App
+        <A />
+      </MsgContext.Provider>
     </div>
   )
 }
@@ -950,3 +561,129 @@ const App = () => {
 export default App
 ```
 
+# React副作用管理-useEffect
+## 概念理解 
+useEffect是一个React Hook函数，用于在React组件中创建不是由事件引起而是由渲染本身引起的操作（副作用）, 比 如发送AJAX请求，更改DOM等等 
+![[Pasted image 20250923220201.png]]
+:::warning
+说明：上面的组件中没有发生任何的用户事件，组件渲染完毕之后就需要和服务器要数据，整个过程属于“只由渲染引起的操作”
+:::
+
+## 基础使用
+> 需求：在组件渲染完毕之后，立刻从服务端获取平道列表数据并显示到页面中
+
+![[Pasted image 20250923220214.png]]
+说明： 
+
+1. 参数1是一个函数，可以把它叫做副作用函数，在函数内部可以放置要执行的操作 
+2. 参数2是一个数组（可选参），在数组里放置依赖项，不同依赖项会影响第一个参数函数的执行，当是一个空数组的时候，副作用函数只会在组件渲染完毕之后执行一次   
+:::warning
+接口地址：http://geek.itheima.net/v1_0/channels
+:::
+## useEffect依赖说明 
+useEffect副作用函数的执行时机存在多种情况，根据传入依赖项的不同，会有不同的执行表现
+
+| **依赖项** | **副作用功函数的执行时机** |
+| --- | --- |
+| 没有依赖项 | 组件初始渲染 + 组件更新时执行 |
+| 空数组依赖 | 只在初始渲染时执行一次 |
+| 添加特定依赖项 | 组件初始渲染 + 依赖项变化时执行 |
+
+## 清除副作用
+> 概念：在useEffect中编写的由渲染本身引起的对接组件外部的操作，社区也经常把它叫做副作用操作，比如在useEffect中开启了一个定时器，我们想在组件卸载时把这个定时器再清理掉，这个过程就是清理副作用
+
+![[Pasted image 20250923220220.png]]
+:::warning
+说明：清除副作用的函数最常见的执行时机是在组件卸载时自动执行
+:::
+
+```jsx
+import { useEffect, useState } from "react"
+
+function Son () {
+  // 1. 渲染时开启一个定时器
+  useEffect(() => {
+    const timer = setInterval(() => {
+      console.log('定时器执行中...')
+    }, 1000)
+
+    return () => {
+      // 清除副作用(组件卸载时)
+      clearInterval(timer)
+    }
+  }, [])
+  return <div>this is son</div>
+}
+
+function App () {
+  // 通过条件渲染模拟组件卸载
+  const [show, setShow] = useState(true)
+  return (
+    <div>
+      {show && <Son />}
+      <button onClick={() => setShow(false)}>卸载Son组件</button>
+    </div>
+  )
+}
+
+export default App
+```
+# 自定义Hook实现
+> 概念：自定义Hook是以 `use打头的函数`，通过自定义Hook函数可以用来`实现逻辑的封装和复用`
+
+![[Pasted image 20250923220227.png]]
+
+```jsx
+// 封装自定义Hook
+
+// 问题: 布尔切换的逻辑 当前组件耦合在一起的 不方便复用
+
+// 解决思路: 自定义hook
+
+import { useState } from "react"
+
+function useToggle () {
+  // 可复用的逻辑代码
+  const [value, setValue] = useState(true)
+
+  const toggle = () => setValue(!value)
+
+  // 哪些状态和回调函数需要在其他组件中使用 return
+  return {
+    value,
+    toggle
+  }
+}
+
+// 封装自定义hook通用思路
+
+// 1. 声明一个以use打头的函数
+// 2. 在函数体内封装可复用的逻辑（只要是可复用的逻辑）
+// 3. 把组件中用到的状态或者回调return出去（以对象或者数组）
+// 4. 在哪个组件中要用到这个逻辑，就执行这个函数，解构出来状态和回调进行使用
+
+
+function App () {
+  const { value, toggle } = useToggle()
+  return (
+    <div>
+      {value && <div>this is div</div>}
+      <button onClick={toggle}>toggle</button>
+    </div>
+  )
+}
+
+export default App
+```
+# React Hooks使用规则
+
+1. 只能在组件中或者其他自定义Hook函数中调用
+2. 只能在组件的顶层调用，不能嵌套在if、for、其它的函数中
+
+![[Pasted image 20250923220233.png]]
+
+# 案例-优化B站评论案例
+![[Pasted image 20250923220237.png]]
+1. 使用请求接口的方式获取评论列表并渲染 
+2. 使用自定义Hook函数封装数据请求的逻辑 
+3. 把评论中的每一项抽象成一个独立的组件实现渲染
