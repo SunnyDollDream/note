@@ -388,7 +388,158 @@ db.Unscoped().Delete(&user)
 ```
 
 ## 约束
+>不写注解默认取父表主键作为子表的关联字段,取`<类名>+<关联的字段名>`拼接作为子表的外键
+>父表中foreignKey注解可以指定子表中的特定属性(如Number)为外键
+>父表中references注解可以指定父表中作为主键的字段
+1. 一对一
+>父表中添加子表的对象属性,子表中添加外键字段
+```go
+// 声明
+// User 有一张 CreditCard，UserID 是外键
+type User struct {
+  gorm.Model
+  CreditCard CreditCard
+}
 
+type CreditCard struct {
+  gorm.Model
+  Number string
+  UserID uint
+}
+// 重写外键
+type User struct {
+  gorm.Model
+  CreditCard CreditCard `gorm:"foreignKey:UserName"` // 使用 UserName 作为外键
+}
+
+type CreditCard struct {
+  gorm.Model
+  Number   string
+  UserName string
+}
+// 重写引用
+type User struct {
+  gorm.Model
+  CreditCard CreditCard `gorm:"foreignKey:UserName"` // 使用 UserName 作为外键
+}
+
+type CreditCard struct {
+  gorm.Model
+  Number   string
+  UserName string
+}
+```
+2. 一对多
+>父表添加子表对象数组,子表添加外键字段
+```go
+// 声明
+// User 有多张 CreditCard，UserID 是外键  
+type User struct {  
+  gorm.Model  
+  CreditCards []CreditCard  
+}  
+  
+type CreditCard struct {  
+  gorm.Model  
+  Number string  
+  UserID uint  
+}
+// 重写外键
+type User struct {
+  gorm.Model
+  CreditCards []CreditCard `gorm:"foreignKey:UserRefer"`
+}
+
+type CreditCard struct {
+  gorm.Model
+  Number    string
+  UserRefer uint
+}
+// 重写引用
+type User struct {
+  gorm.Model
+  MemberNumber string
+  CreditCards  []CreditCard `gorm:"foreignKey:UserNumber;references:MemberNumber"`
+}
+
+type CreditCard struct {
+  gorm.Model
+  Number     string
+  UserNumber string
+}
+```
+3. 多对多
+>两张表中都添加对方的对象数组,中间表创建联合主键
+>many2many是必须的
+>不写其他注解默认关联两张表的主键
+```go
+// 声明
+// User 拥有并属于多种 language，`user_languages` 是连接表
+type User struct {
+  gorm.Model
+  Languages []Language `gorm:"many2many:user_languages;"`
+}
+
+type Language struct {
+  gorm.Model
+  Name string
+}
+// 反向引用
+// User 拥有并属于多种 language，`user_languages` 是连接表
+type User struct {
+  gorm.Model
+  Languages []*Language `gorm:"many2many:user_languages;"`
+}
+
+type Language struct {
+  gorm.Model
+  Name string
+  Users []*User `gorm:"many2many:user_languages;"`
+}
+// 重写外键
+type User struct {
+    gorm.Model
+    Profiles []Profile `gorm:"many2many:user_profiles;foreignKey:Refer;joinForeignKey:UserReferID;References:UserRefer;joinReferences:ProfileRefer"`
+    Refer    uint      `gorm:"index:,unique"`
+}
+
+type Profile struct {
+    gorm.Model
+    Name      string
+    UserRefer uint `gorm:"index:,unique"`
+}
+
+// 会创建连接表：user_profiles
+//   foreign key: user_refer_id, reference: users.refer
+//   foreign key: profile_refer, reference: profiles.user_refer
+
+// 自定义连接表
+type Person struct {
+  ID        int
+  Name      string
+  Addresses []Address `gorm:"many2many:person_addresses;"`
+}
+
+type Address struct {
+  ID   uint
+  Name string
+}
+
+type PersonAddress struct {
+  PersonID  int `gorm:"primaryKey"`
+  AddressID int `gorm:"primaryKey"`
+  CreatedAt time.Time
+  DeletedAt gorm.DeletedAt
+}
+
+func (PersonAddress) BeforeCreate(db *gorm.DB) error {
+  // ...
+}
+
+// 修改 Person 的 Addresses 字段的连接表为 PersonAddress
+// PersonAddress 必须定义好所需的外键，否则会报错
+err := db.SetupJoinTable(&Person{}, "Addresses", &PersonAddress{})
+```
 #### 一对多
 
 如果一个结构体中有另一个结构体,在使用GORM时就会为这两个结构体对应的表添加外键关系
@@ -419,7 +570,7 @@ GORM中也可以使用tag表示外键
 type User struct {
   ID       uint      `gorm:"size:4"`
   Name     string    `gorm:"size:8"`
-  Articles []Article `gorm:"foreignKey:UID"` // 用户拥有的文章列表
+  Articles []Article `gorm:"foreignKey:UID;references:ID"` // 用户拥有的文章列表
 }
 
 type Article struct {

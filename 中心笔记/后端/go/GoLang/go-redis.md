@@ -3,8 +3,10 @@
 ## 使用
 
 #### 安装:
+```bash
+go get github.com/go-redis/redis
+```
 
-`go get -u` `github.com/go-redis/redis`
 
 #### 配置文件
 

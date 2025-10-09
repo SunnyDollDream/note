@@ -10,12 +10,12 @@
 
 ### 3.使用的库
 (1).#include<easyx.h> 图形库
-(2).#include<iostream> c++的个库,只用到了printf_s来改变游戏内文本
+(2).#include`<iostream>` c++的个库,只用到了printf_s来改变游戏内文本
 (3).#include<stdlib.h>
 (4).#include<conio.h> 
 我好像没用到这两个库?因为我把他注释掉程序编译还是成功的,过程有点长我当时想干什么好像忘记了,(之前想限制帧率但是实际改完后游戏显的很卡所以就去掉了,可能和这个功能有关系)
 (5).#include<mmsystem.h> 
-   #pragma comment(lib,"winmm.lib")  多媒体库,用来播放音乐(playsound()和mic)
+   `#pragma comment(lib,"winmm.lib")`  多媒体库,用来播放音乐(playsound()和mic)
 (6).#include<string.h> 处理字符串
 (7).#include<Windows.h> 播放音乐和音效
 (8).#include<time.h> 实时获取游戏时间(因为游戏目标是存活一定时间)(clock(),被废弃的帧率控制也用到了)

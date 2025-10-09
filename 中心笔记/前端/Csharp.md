@@ -281,6 +281,72 @@ foreach (var item in collection)
 }
 ```
 collection 是要遍历的集合，item 是当前遍历到的元素。
+### switch-case 循环
+C#中switch-case语句除了正常的用法,还对范围匹配做了优化
+#### when(C# 7.0+)
+```C#
+int number = 25;
+
+switch (number)
+{
+    case int n when n >= 0 && n < 10:
+        Console.WriteLine("0-9");
+        break;
+    case int n when n >= 10 && n < 20:
+        Console.WriteLine("10-19");
+        break;
+    case int n when n >= 20 && n < 30:
+        Console.WriteLine("20-29");
+        break;
+    default:
+        Console.WriteLine("其他范围");
+        break;
+}
+```
+#### switch表达式(C# 8.0+)
+```C#
+int number = 25;
+
+string result = number switch
+{
+    int n when n >= 0 && n < 10 => "0-9",
+    int n when n >= 10 && n < 20 => "10-19",
+    int n when n >= 20 && n < 30 => "20-29",
+    _ => "其他范围"
+};
+
+Console.WriteLine(result);
+```
+#### 关系模式(C# 9.0+)
+```C#
+int number = 25;
+
+string result = number switch
+{
+    >= 0 and < 10 => "0-9",
+    >= 10 and < 20 => "10-19",
+    >= 20 and < 30 => "20-29",
+    _ => "其他范围"
+};
+
+Console.WriteLine(result);
+```
+关系模式的写法类似于lambda表达式,匹配的是传入的每一个参数,`_`为忽略
+```C#
+int age = 25;
+bool isStudent = true;
+
+string category = (age, isStudent) switch
+{
+    ( < 18, _) => "未成年人",
+    ( >= 18 and < 65, true) => "成年学生",
+    ( >= 18 and < 65, false) => "在职成人",
+    ( >= 65, _) => "老年人",
+    _ => "其他"
+};
+
+Console.WriteLine(category);
+```
 ### 访问修饰符
 一个 访问修饰符 定义了一个类成员的范围和可见性。C# 支持的访问修饰符如下所示：
 >类成员的默认访问修饰符为private
