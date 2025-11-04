@@ -42,7 +42,7 @@ let age: number = 18
 原始类型：number/string/boolean/null/undefined/symbol。
 对象类型：object（包括，数组、对象、函数等对象）。
 2. TS 新增类型
-联合类型、自定义类型（类型别名）、接口、元组、字面量类型、枚举、void、any 等。
+联合类型、自定义类型（类型别名）、接口、元组、字面量类型、枚举、void、any.never 等。
 ### 原始类型
 >这些类型，完全按照 JS 中类型的名称来书写。
 ```ts
@@ -288,6 +288,23 @@ console.log(obj) // { x: 0, bar: 100 }
 隐式具有 any 类型的情况：
 1. 声明变量不提供类型也不提供默认值 
 2. 函数参数不加类型。
+### never
+`never`是其他类型 （包括`null`和 `undefined`）的子类型，可以赋值给任何类型，代表从不会出现的值
+但是没有类型是 never 的子类型，这意味着声明 `never` 的变量只能被 `never` 类型所赋值。
+`never` 类型一般用来指定那些总是会抛出异常、无限循环
+```js
+let a:never;
+a = 123; // 错误的写法
+
+a = (() => { // 正确的写法
+  throw new Error('错误');
+})()
+
+// 返回never的函数必须存在无法达到的终点
+function error(message: string): never {
+    throw new Error(message);
+}
+```
 ### typeof
 >TS 也提供了 typeof 操作符：可以在类型上下文中引用变量或属性的类型（类型查询）。
 >可以根据已有变量的值，获取该值的类型，来简化类型书写。
@@ -832,4 +849,3 @@ export { count, songName, position, add, changeDirection, formatPoint }
 ```
 >注意两个文件文件名要相同,对与函数只要函数名一致就可以,用的是表达式形式还是function的形式没有影响
 
-## React-TS
