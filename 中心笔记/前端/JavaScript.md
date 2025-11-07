@@ -5639,3 +5639,68 @@ person.facepalm();
 person.facepalmHard();
 // DEPRECATION Person#facepalmHard: 功能废除了
 ```
+### 新标准
+新版装饰器使用统一的函数签名：`(value, context) => {...}`。
+- **`value`**: 是被装饰的目标本身（如类、方法、字段）。
+- **`context`**: 是一个对象，提供了装饰目标的元信息，其包含的`kind`属性（如 `'class'`, `'method'`, `'field'`）指明了装饰目标的类型
+#### 1. 类装饰器
+在新标准中，类装饰器接收类和上下文，通过 `context.kind === 'class'` 进行判断。
+```js
+// 新版：为类添加元数据
+function setVersion(version) {
+  return (value, {kind}) => {
+    if (kind === 'class') {
+      value.prototype.version = version;
+    }
+    return value;
+  };
+}
+
+@setVersion('1.0.0')
+class MyClass {}
+```
+在新标准中，类装饰器需要返回一个类（或原始的 `value`）。如果你想修改类，通常是通过其原型（prototype）操作，或者返回一个继承自原类的子类。
+#### 2. 方法装饰器
+
+方法装饰器通过 `context.kind === 'method'` 来判断，可以利用 `context` 对象的 `addInitializer` 等方法。
+```js
+// 新版：自动绑定方法到实例
+function bound(value, { kind, name, addInitializer }) {
+  if (kind !== 'method') return value;
+  
+  addInitializer(function () {
+    this[name] = value.bind(this);
+  });
+}
+
+class MyComponent {
+  @bound
+  handleClick() {
+    // 这里的 `this` 将始终指向实例
+  }
+}
+```
+#### 3. 字段装饰器
+
+这是新版装饰器新增的能力，通过 `context.kind === 'field'` 来判断。
+```js
+// 新版：将字段转换为存取器
+function reactive(value, { kind, name }) {
+  if (kind === 'field') {
+    let _value = value;
+    return {
+      get() { return _value; },
+      set(newValue) {
+        console.log(`Setting ${String(name)} to`, newValue);
+        _value = newValue;
+      },
+      init() {}
+    };
+  }
+}
+
+class Store {
+  @reactive
+  count = 0;
+}
+```

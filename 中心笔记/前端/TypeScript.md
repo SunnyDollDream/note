@@ -192,6 +192,80 @@ interface Point3D2 extends Point2D {
 ```
 1. 使用 extends（继承）关键字实现了接口 Point3D 继承 Point2D。
 2. 继承后，Point3D 就有了 Point2D 的所有属性和方法（此时，Point3D 同时有 x、y、z 三个属性）。
+#### 访问器
+访问器是类中用于控制对属性访问的特殊方法，包括：
+ 1. Getter 访问器（获取器）
+	- 用于**读取**属性值
+	- 以 `get` 关键字开头
+	- 不接受参数，必须返回一个值
+```
+ class Person {
+  private _name: string = 'huihui';
+  
+  // Getter 访问器
+  get name(): string {
+    console.log('正在读取 name 属性');
+    return this._name;
+  }
+}
+
+const person = new Person();
+console.log(person.name); // 触发 getter，输出："正在读取 name 属性"，然后 "huihui"
+```
+>不一定就是对源对象属性的访问,可以像计算属性一样使用,get <变量名>,这样也可以直接用实例化对象.出来
+```ts
+class Rectangle {
+  constructor(private _width: number, private _height: number) {}
+  
+  // 计算属性：面积
+  get area(): number {
+    return this._width * this._height;
+  }
+  
+  // 验证逻辑
+  set width(value: number) {
+    if (value > 0) {
+      this._width = value;
+    }
+  }
+}
+
+const rect = new Rectangle(10, 20);
+console.log(rect.area); // 200，调用 getter
+rect.width = 30;        // 调用 setter
+```
+ 2. Setter 访问器（设置器）
+- 用于**设置**属性值
+- 以 `set` 关键字开头
+- 接受一个参数，不返回值
+```ts
+class Person {
+  private _name: string = 'huihui';
+  private _age: number = 0;
+  
+  // Getter 访问器
+  get name(): string {
+    return this._name;
+  }
+  
+  // Setter 访问器
+  set name(newName: string) {
+    if (newName.length > 0) {
+      this._name = newName;
+    }
+  }
+  
+  set age(newAge: number) {
+    if (newAge >= 0) {
+      this._age = newAge;
+    }
+  }
+}
+
+const person = new Person();
+person.name = '张三'; // 触发 setter
+person.age = -5;     // 不会设置，因为年龄不能为负
+```
 ### 类型推断
 在 TS 中，某些没有明确指出类型的地方，TS 的类型推论机制会帮助提供类型。
 换句话说：由于类型推论的存在，这些地方，类型注解可以省略不写！
@@ -849,3 +923,68 @@ export { count, songName, position, add, changeDirection, formatPoint }
 ```
 >注意两个文件文件名要相同,对与函数只要函数名一致就可以,用的是表达式形式还是function的形式没有影响
 
+## Decorator
+Ts的装饰器与js的不完全相同,且需要手动开启(tsconfig.json)
+```json
+{
+    "compilerOptions": {
+        "target": "ES5",
+        "experimentalDecorators": true
+    }
+}
+```
+### 区别
+**TypeScript 装饰器（传统/实验性）**：
+```ts
+// 类装饰器
+function classDecorator(constructor: Function) {}
+
+// 方法装饰器  
+function methodDecorator(target: any, propertyKey: string, descriptor: PropertyDescriptor) {}
+
+// 参数装饰器
+function paramDecorator(target: any, propertyKey: string, parameterIndex: number) {}
+```
+例子
+```ts
+function log(target: any, methodName: string, descriptor: PropertyDescriptor) {
+  const originalMethod = descriptor.value;
+  descriptor.value = function(...args: any[]) {
+    console.log(`调用 ${methodName}，参数:`, args);
+    return originalMethod.apply(this, args);
+  };
+}
+
+class MyClass {
+  @log
+  greet(name: string) {
+    return `Hello, ${name}!`;
+  }
+}
+```
+**JavaScript 装饰器（新标准）**：
+```js
+// 所有装饰器统一签名
+function decorator(value, context) {
+  // context 包含元数据信息
+  const { kind, name, addInitializer } = context;
+}
+```
+例子
+```js
+function log(value, { kind, name }) {
+  if (kind === 'method') {
+    return function(...args) {
+      console.log(`调用 ${name}，参数:`, args);
+      return value.call(this, ...args);
+    };
+  }
+}
+
+class MyClass {
+  @log
+  greet(name) {
+    return `Hello, ${name}!`;
+  }
+}
+```
