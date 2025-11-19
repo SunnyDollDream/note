@@ -42,7 +42,7 @@ let age: number = 18
 原始类型：number/string/boolean/null/undefined/symbol。
 对象类型：object（包括，数组、对象、函数等对象）。
 2. TS 新增类型
-联合类型、自定义类型（类型别名）、接口、元组、字面量类型、枚举、void、any.never 等。
+联合类型、自定义类型（类型别名）、接口、元组、字面量类型、枚举、void、any,never 等。
 ### 原始类型
 >这些类型，完全按照 JS 中类型的名称来书写。
 ```ts
@@ -379,6 +379,42 @@ function error(message: string): never {
     throw new Error(message);
 }
 ```
+**类型保护中的穷尽检查**
+```ts
+// 定义联合类型
+type Shape = 
+    | { kind: "circle"; radius: number }
+    | { kind: "square"; side: number }
+    | { kind: "triangle"; base: number; height: number };
+
+// 计算面积函数
+function getArea(shape: Shape): number {
+    switch (shape.kind) {
+        case "circle":
+            return Math.PI * shape.radius ** 2;
+        case "square":
+            return shape.side ** 2;
+        case "triangle":
+            return 0.5 * shape.base * shape.height;
+        default:
+            // 这里的 shape 应该是 never 类型
+            // 如果 Shape 有新的类型没处理，这里会报错！
+            const _exhaustiveCheck: never = shape;
+            throw new Error(`未知的形状: ${_exhaustiveCheck}`);
+    }
+}
+
+// ✅ 现在如果我们添加新的形状类型：
+type Shape = 
+    | { kind: "circle"; radius: number }
+    | { kind: "square"; side: number }
+    | { kind: "triangle"; base: number; height: number }
+    | { kind: "hexagon"; side: number }; // 新增类型
+
+// ❌ TypeScript 会立即报错！
+// 错误：类型 '{ kind: "hexagon"; side: number; }' 不能赋值给类型 'never'
+```
+这样比直接抛出错误的好处是静态检查,无需等到运行时才报错
 ### typeof
 >TS 也提供了 typeof 操作符：可以在类型上下文中引用变量或属性的类型（类型查询）。
 >可以根据已有变量的值，获取该值的类型，来简化类型书写。
@@ -756,7 +792,112 @@ let test3: Props[keyof Props] // string | number | boolean
 ```
 `[]` 中的属性必须存在于被查询类型中，否则就会报错。
 ## 工具类
-### `Partial<Type>`
+### 处理联合类型
+#### Extract<Type,Keys> (提取/包括)
+>一般用于处理联合类型
+```ts
+// 处理联合类型
+type Test1 = '1' | '2' | '3'
+
+const obj: Extract<Test1, '1' | '2'> = '1'; // 1,2 OK 赋值3就会error
+```
+**源码**
+```ts
+// Extract实现源码 原理很简单
+type Extract<T, U> = T extends U ? T : never;
+```
+#### Exclude<Type,Keys> (排除/不包括)
+>和 Extract 正好相反，也是用于处理联合类型
+```ts
+// 处理联合类型
+type Test1 = '1' | '2' | '3'
+
+const obj: Exclude<Test1, '1' | '2'> = '3'; // 3 OK 赋值1,2就会error
+```
+**源码**
+```ts
+// Exclude源码
+type Exclude<T, U> = T extends U ? never : T;
+```
+#### `NonNullable<Type>` (类型中排除 `null` 和 `undefined`)
+```ts
+type MaybeString = string | null | undefined;  
+  
+const value: MaybeString = getSomeStringValue(); // 假设这个函数可能返回一个字符串、null 或 undefined  
+  
+// 使用 NonNullable 确保 value 不会是 null 或 undefined  
+const nonNullableValue: NonNullable<MaybeString> = value!; // 使用 ! 断言操作符，或者通过其他方式确保值不为 null 或 undefined  
+  
+// 现在，nonNullableValue 的类型是 string，因为我们已经排除了 null 和 undefined  
+console.log(nonNullableValue.length); // 这是安全的，因为我们知道 nonNullableValue 一定是字符串
+
+// 其实就是某些场景绝对为了排除null,undefined的类型才用的
+```
+**源码**
+```ts
+// 源码
+/**
+ * Exclude null and undefined from T
+ */
+type NonNullable<T> = T & {}; // 源码的这一句写的很有意思，泛型参数T和{}的交集就默认排除了`null` 和 `undefined`
+```
+### 处理一般类型
+#### Pick<Type, Keys> (采集)
+>从 Type 中选择一组属性来构造新类型。
+```ts
+interface Props {
+  id: string
+  title: string
+  children: number[]
+}
+
+type PickyProps = Pick<Props, 'id' | 'title'>
+
+type PickyProps = {
+  id: string
+  title: string
+}
+```
+**源码**
+```ts
+// Pick 的源码
+type Pick<T, K extends keyof T> = {
+    [P in K]: T[P];
+};
+```
+1. Pick 工具类型有两个类型变量：1 表示选择谁的属性 2 表示选择哪几个属性。
+2. 其中第二个类型变量，如果只选择一个则只传入该属性名即可。
+3. 第二个类型变量传入的属性只能是第一个类型变量中存在的属性。
+4. 构造出来的新类型 PickProps，只有 id 和 title 两个属性类型。
+#### Omit<Type,Keys> (省略/剔除)
+>顾名思义 可以剔除 已定义对象中 自己不需要的一部分形成新的定义类型。
+```ts
+interface UserObj {
+    readonly name: string; // readonly 只读属性 只能初始化定义 不能二次赋值
+    age: number;
+    id: number;
+    sex: 0 | 1;
+    address: string;
+    weight: number;
+}
+
+// 剔除省略自己不需要的
+type Person = Omit<UserObj, "age" | "sex"  | "address" | "weight">;
+
+// 此时Person 等同于 Person1
+
+interface Person1 {
+    readonly name: string;
+    id: number;
+}
+```
+**源码**
+```ts
+// Omit 的源码
+type Omit<T, K extends keyof any> = Pick<T, Exclude<keyof T, K>>;
+```
+### 修改属性元类型
+#### `Partial<Type>`
 >用来构造（创建）一个类型，将 Type 的所有属性设置为可选。
 ```ts
 interface Props {
@@ -772,8 +913,50 @@ type PartialProps = {
   children?: number[]
 }
 ```
+**源码**
+```ts
+type Partial<T> = {
+    [P in keyof T]?: T[P];
+};
+```
 构造出来的新类型 PartialProps 结构和 Props 相同，但所有属性都变为可选的。
-### `Readonly<Type>`
+#### `Required<Type>` (必选的)
+>Required 和 Partial刚好相反,可把定义好的对象（包含 必选+可选项）类型全部转化为 **必选项**
+```ts
+// 已有定义类型Person
+interface Person {
+    name: string;
+    age: number;
+    id?: number;
+    sex?: 0 | 1;
+}
+
+// 使用方法
+const newObj: Required<Person> = {
+    name: '张三',
+    age: 1,
+    id: 1,
+    sex: 1
+};
+
+// Required<Person>等同于 NewPerson
+interface NewPerson {
+    name: string;
+    age: number;
+    id: number;
+    sex: 0 | 1;
+}
+```
+**源码**
+```ts
+/**
+ * Make all properties in T required
+ */
+type Required<T> = {
+    [P in keyof T]-?: T[P]; // -?" 意思是移除可选属性
+};
+```
+#### `Readonly<Type>` (转化只读)
 >用来构造一个类型，将 Type 的所有属性都设置为 readonly（只读）。
 ```ts
 interface Props {
@@ -790,28 +973,18 @@ type ReadonlyProps = {
   readonly children: number[]
 }
 ```
-构造出来的新类型 ReadonlyProps 结构和 Props 相同，但所有属性都变为只读的。
-### Pick<Type, Keys>
->从 Type 中选择一组属性来构造新类型。
+**源码**
 ```ts
-interface Props {
-  id: string
-  title: string
-  children: number[]
-}
-
-type PickyProps = Pick<Props, 'id' | 'title'>
-
-type PickyProps = {
-  id: string
-  title: string
-}
+/**
+ * Make all properties in T readonly
+ */
+type Readonly<T> = {
+    readonly [P in keyof T]: T[P];
+};
 ```
-1. Pick 工具类型有两个类型变量：1 表示选择谁的属性 2 表示选择哪几个属性。
-2. 其中第二个类型变量，如果只选择一个则只传入该属性名即可。
-3. 第二个类型变量传入的属性只能是第一个类型变量中存在的属性。
-4. 构造出来的新类型 PickProps，只有 id 和 title 两个属性类型。
-### Record<Keys,Type>
+构造出来的新类型 ReadonlyProps 结构和 Props 相同，但所有属性都变为只读的。
+### 推导新类型
+#### Record<Keys,Type>
 >构造一个对象类型，属性键为 Keys，属性类型为 Type。
 ```ts
 type RecordObj = Record<'a' | 'b' | 'c', string[]>
@@ -826,6 +999,36 @@ type RecordObj = {
 ```
 1. Record 工具类型有两个类型变量：1 表示对象有哪些属性 2 表示对象属性的类型。
 2. 构建的新对象类型 RecordObj 表示：这个对象有三个属性分别为a/b/c，属性值的类型都是 `string[]`。
+#### `ReturnType<Type>` (函数的类型推导返回)
+>即获取函数返回值的对应类型
+```ts
+// 正确用法
+const myFun = () => ({
+    name: 'zhangsan',
+    age: 233,
+    sex: '1',
+    tel: 123456789,
+    fun: () => {
+        return 233;
+    },
+    arr: [1,2,3,4,5,6]
+});
+
+
+type Test2 = ReturnType<typeof myFun>; // OK 鼠标放到Test2上可以发现 已推导出了myFun函数的返回类型。
+
+// 错误用法
+const someValue = 42;  
+type InvalidReturnType = ReturnType<typeof someValue>; // error错误！someValue 不是一个函数。
+```
+**源码**
+```ts
+// ReturnType源码
+/**
+ * Obtain the return type of a function type
+ */
+type ReturnType<T extends (...args: any) => any> = T extends (...args: any) => infer R ? R : any;
+```
 ## 类型声明文件
 >所有的三方库都是编译为js再发布的,但是使用时却有类型提示和保护,这是因为类型声明文件==为js提供了类型信息==
 

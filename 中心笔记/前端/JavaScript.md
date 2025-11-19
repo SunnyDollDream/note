@@ -736,11 +736,17 @@ console.log(num)
     console.log('-----------------')
   </script>
 ```
-
-### 运算符优先级
-
 > 逻辑运算符优先级： ！> && >  ||  
+### 便捷操作符
 
+| 操作符                               | 主要用途                                                                                                                                                                                                                                | 典型应用场景与示例                                                                                                                                                                                                                                                                          |
+| --------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 可选链操作符 (Optional Chaining) `?.`   | 安全地访问深层嵌套的对象属性或方法，避免因中间值为 `null` 或 `undefined` 而出错[](https://cloud.tencent.com.cn/developer/article/2073555?from=15425)[](https://yari-demos.prod.mdn.mozit.cloud/zh-CN/docs/Web/JavaScript/Reference/Operators/Optional_chaining)。 | `user?.address?.city`：如果 `user` 或 `user.address` 是 `null` 或 `undefined`，表达式直接返回 `undefined` 而不是报错[](https://cloud.tencent.com.cn/developer/article/2073555?from=15425)[](https://yari-demos.prod.mdn.mozit.cloud/zh-CN/docs/Web/JavaScript/Reference/Operators/Optional_chaining)。 |
+| 空值合并操作符 (Nullish Coalescing) `??` | 提供默认值，仅当左侧的值为 `null` 或 `undefined` 时，才返回右侧的值[](https://m.yisu.com/zixun/795125.html)。                                                                                                                                               | `const name = inputName ?? '匿名用户';`：如果 `inputName` 为 `null` 或 `undefined`，`name` 将默认为 `'匿名用户'`。注意它与 `\|` 的区别[](https://m.yisu.com/zixun/795125.html)。                                                                                                                              |
+| 箭头函数 (Arrow Function) `=>`        | 提供更简洁的函数语法，并且不绑定自己的 `this` 值[](https://m.yisu.com/zixun/795125.html)。                                                                                                                                                               | `const add = (a, b) => a + b;`                                                                                                                                                                                                                                                     |
+| 模板字面量 (Template Literals) 使用反引号   | 方便地嵌入变量和表达式，支持字符串换行[](https://m.yisu.com/zixun/795125.html)。                                                                                                                                                                        | ``console.log(`Hello, ${name}!`);``                                                                                                                                                                                                                                                |
+| 展开操作符 (Spread Operator) `...`     | 展开数组或对象的元素，常用于数组拼接、对象合并、函数传参[](https://m.yisu.com/zixun/795125.html)。                                                                                                                                                               | `const newArr = [...arr1, ...arr2];` `const newObj = { ...obj1, ...obj2 };`                                                                                                                                                                                                        |
+>注意 `||` 会对所有假值如 `0`、`''`、`false` 等起效，而 `??` 只针对 `null` 和 `undefined`
 ## 语句
 
 ### 表达式和语句

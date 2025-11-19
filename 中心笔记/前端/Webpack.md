@@ -1,196 +1,155 @@
-### 简介
-
+## 简介
 1. Webpack 是一个静态模块打包工具，从入口构建依赖图，打包有关的模块，最后用于展示你的内容
    ![image-20230403105744257](images/image-20230403105744257.png)
 2. 静态模块：编写代码过程中的，html，css， js，图片等固定内容的文件
-
 3. 打包过程，注意：只有和入口有直接/间接引入关系的模块，才会被打包
    ![image-20230403105848637](images/image-20230403105848637.png)
 4. Webpack 的作用：把静态模块内容，压缩，这个和，转译等（前端工程化）
+	- 把 less/sass 转成 css 代码
+	- 把 ES6+ 降级成 ES5 等
+	- 支持多种模块文件类型，多种模块标准语法
+## 使用
+### 安装
+>需求：封装 utils 包，校验手机号和验证码长度，在 src/index.js 中使用，使用 Webpack 打包
 
-   * 把 less/sass 转成 css 代码
-   * 把 ES6+ 降级成 ES5 等
-   * 支持多种模块文件类型，多种模块标准语法
+1. 新建项目文件夹 Webpack_study，初始化包环境，得到 package.json 文件
+```bash
+npm init -y
+```
+2.  新建 src 源代码文件夹（书写代码）包括 utils/check.js 封装用户名和密码长度函数，引入到src/index.js 进行使用
+- src/utils/check.js
+```js
+// 封装校验手机号长度和校验验证码长度的函数
+export const checkPhone = phone => phone.length === 11
+export const checkCode = code => code.length === 6
+```
+- src/index.js
+```js
+/**
+ * 目标1：体验 webpack 打包过程
+ */
+// 1.1 准备项目和源代码
+import { checkPhone, checkCode } from '../utils/check.js'
+console.log(checkPhone('13900002020'))
+console.log(checkCode('123123123123'))
+// 1.2 准备 webpack 打包的环境
+// 1.3 运行自定义命令打包观察效果（npm run 自定义命令）
+```
+3. 下载 webpack webpack-cli 到项目（版本独立,--save-dev表示这两个包在开发环境下使用）
+```bash
+npm i webpack webpack-cli --save-dev
+```
+> 注意：虽然 webpack 是全局软件包，封装的是命令工具，但是为了保证项目之间版本分别独立，所以这次比较特殊，下载到某个项目环境下，但是需要把 webpack 命令配置到 package.json 的 scripts 自定义命令，作为局部命令使用
 
- 5. 为何不学 vite？
-
-    > 现在很多项目还是基于 Webpack 来进行构建的，所以还是要掌握 Webpack 的使用
-
- 6. 需求：封装 utils 包，校验手机号和验证码长度，在 src/index.js 中使用，使用 Webpack 打包
-
- 7. 步骤：
-
-    1. 新建项目文件夹 Webpack_study，初始化包环境，得到 package.json 文件
-
-       ```bash
-       npm init -y
-       ```
-
-    2. 新建 src 源代码文件夹（书写代码）包括 utils/check.js 封装用户名和密码长度函数，引入到 src/index.js 进行使用
-
-       * src/utils/check.js
-
-         ```js
-         // 封装校验手机号长度和校验验证码长度的函数
-         export const checkPhone = phone => phone.length === 11
-         export const checkCode = code => code.length === 6
-         ```
-
-       * src/index.js
-
-         ```js
-         /**
-          * 目标1：体验 webpack 打包过程
-          */
-         // 1.1 准备项目和源代码
-         import { checkPhone, checkCode } from '../utils/check.js'
-         console.log(checkPhone('13900002020'))
-         console.log(checkCode('123123123123'))
-         // 1.2 准备 webpack 打包的环境
-         // 1.3 运行自定义命令打包观察效果（npm run 自定义命令）
-         ```
-
-    3. 下载 webpack webpack-cli 到项目（版本独立,--save-dev表示这两个包在开发环境下使用）
-
-       ```bash
-       npm i webpack webpack-cli --save-dev
-       ```
-
-       > 注意：虽然 webpack 是全局软件包，封装的是命令工具，但是为了保证项目之间版本分别独立，所以这次比较特殊，下载到某个项目环境下，但是需要把 webpack 命令配置到 package.json 的 scripts 自定义命令，作为局部命令使用
-
-       ![image-20230403110640647](images/image-20230403110640647.png)
-
-    4. 项目中运行工具命令，采用自定义命令的方式（局部命令）
-
-       ```bash
-       npm run build
-       ```
-
-       > npm run 自定义命令名字
-       >
-       > 注意：实际上在终端运行的是 build 右侧的具体命名
-
-    5. 自动产生 dist 分发文件夹（压缩和优化后，用于最终运行的代码）
-
- 8. 需求最终流程图：
-
-    ![image-20230403111445196](images/image-20230403111445196.png)
+![image-20230403110640647](images/image-20230403110640647.png)
+4. 项目中运行工具命令，采用自定义命令的方式（局部命令）
+```bash
+npm run build
+```
+> npm run <自定义命令名字>
+> 注意：实际上在终端运行的是 build 右侧的具体命名
+> 如果是裸npm项目,需要查看package.json'中的模块化选项是否正确以及此时没有额外配置,导入时的文件名不能省略后缀
+5. 自动产生 dist 分发文件夹（压缩和优化后，用于最终运行的代码）
+6. 需求最终流程图：
+![image-20230403111445196](images/image-20230403111445196.png)
 ### 修改入口和出口
-
 1. [Webpack 配置]([https://webpack.docschina.org/concepts/#entry](https://webpack.docschina.org/concepts/))：影响 Webpack 打包过程
-
 2. 步骤：
+	1. 在**项目根目录**新建 Webpack.config.js 配置文件
+	2. 导出配置对象，配置入口(entry)，出口(output)文件路径（别忘了修改磁盘文件夹和文件的名字）
+	3. 重新打包观察
+```js
+import path from 'path'
+import { fileURLToPath } from 'url'
 
-   3. 项目根目录，新建 Webpack.config.js 配置文件
+const __filename = fileURLToPath(import.meta.url) 
+const __dirname = path.dirname(__filename) // 在ESM中__dirname不可用,需要自己处理
 
-   4. 导出配置对象，配置入口，出口文件路径（别忘了修改磁盘文件夹和文件的名字）
-
-      ```js
-      const path = require('path')
-      
-      module.exports = {
-        entry: path.resolve(__dirname, 'src/login/index.js'),//目标文件的入口
-        output: {
-          path: path.resolve(__dirname, 'dist'),//目标文件的出口
-          filename: './login/index.js'  
-          clean: true //清空输出目录后再次生成
-        }
-      }
-      ```
-
-   5. 重新打包观察
-
-6. 图解：
-
+export default {
+  entry: path.resolve(__dirname, 'src/login/index.js'), // 入口
+  output: { //出口
+    path: path.resolve(__dirname, 'dist'), // 出口对应的路径
+    filename: './login/index.js', // 生成的文件名(带文件夹会生成文件夹)
+    clean: true // 清除上次构建产物
+  },
+}
+```
+3. 图解：
    ![image-20230518101043103](images/image-20230518101043103.png)
 ### 自动生成 html 文件
+>这个插件是会把所有打包产物都导入你指定的模板中的,意义不明
 
-1. [插件 html-webpack-plugin 作用](https://webpack.docschina.org/plugins/html-webpack-plugin/)：在 Webpack 打包时生成 html 文件，并引入其他打包后的资源
+[插件 html-webpack-plugin 作用](https://webpack.docschina.org/plugins/html-webpack-plugin/)：在 Webpack 打包时生成 html 文件，并引入其他打包后的资源
 
-2. 步骤：
+**步骤**：
+1. 下载 html-webpack-plugin 本地软件包到项目中
+```bash
+npm i html-webpack-plugin --save-dev
+```
+2. 配置 webpack.config.js 让 Webpack 拥有插件功能
+```js
+const HtmlWebpackPlugin = require('html-webpack-plugin')
 
-   3. 下载 html-webpack-plugin 本地软件包到项目中
-
-      ```bash
-      npm i html-webpack-plugin --save-dev
-      ```
-
-   4. 配置 webpack.config.js 让 Webpack 拥有插件功能
-
-      ```js
-      // ...
-      const HtmlWebpackPlugin = require('html-webpack-plugin')
-      
-      module.exports = {
-        // ...
-        plugins: [
-          new HtmlWebpackPlugin({
-            template: './public/login.html', // 模板文件
-            filename: './login/index.html' // 输出文件
-          })
-        ]
-      }
-      ```
-
-   5. 指定以 public/login.html 为模板复制到 dist/login/index.html，并自动引入其他打包后资源
-
-6. 运行打包命令，观察打包后 dist 文件夹下内容并运行查看效果
+module.exports = {
+  // ...
+  plugins: [
+    new HtmlWebpackPlugin({
+      template: path.resolve(__dirname, 'public/login.html'), // 模板文件
+      filename: path.resolve(__dirname, 'dist/login/index.html'), // 输出文件
+      // 这里也可以不加resolve,写./login会自动相对之前配置的出口文件夹
+    }),
+  ],
+}
+```
+3. 指定以 public/login.html 为模板复制到 dist/login/index.html，并自动引入其他打包后资源
+4. 运行打包命令，观察打包后 dist 文件夹下内容并运行查看效果
 ### 打包 css 代码
+>Webpack 默认只识别 JS 和 JSON 文件内容，所以想要让 Webpack 识别更多不同内容，需要使用加载器(loader)
 
-1. 注意：Webpack 默认只识别 JS 和 JSON 文件内容，所以想要让 Webpack 识别更多不同内容，需要使用加载器
-
-2. 介绍需要的 2 个加载器来辅助 Webpack 才能打包 css 代码
-
+介绍需要的 2 个加载器来辅助 Webpack 才能打包 css 代码
    * [加载器 css-loader](https://webpack.docschina.org/loaders/css-loader/)：解析 css 代码
    * [加载器 style-loader](https://webpack.docschina.org/loaders/style-loader/)：把解析后的 css 代码插入到 DOM（style 标签之间）
 
-3. 步骤：
+**步骤**：
+1. 准备 css 文件引入到 src/login/index.js 中（压缩转译处理等）
+```js
+/**
+ * 目标5：打包 css 代码
+ *  5.1 准备 css 代码，并引入到 js 中
+ *  5.2 下载 css-loader 和 style-loader 本地软件包
+ *  5.3 配置 webpack.config.js 让 Webpack 拥有该加载器功能
+ *  5.4 打包后观察效果
+ */
+// 5.1 准备 css 代码，并引入到 js 中
+import 'bootstrap/dist/css/bootstrap.min.css'
+import './index.css'
+```
+> 注意：这里只是引入代码内容让 Webpack 处理，不需定义变量接收在 JS 代码中继续使用，所以没有定义变量接收
+2. 下载 css-loader 和 style-loader 本地软件包
+```bash
+npm i css-loader style-loader --save-dev
+```
+3. 配置 webpack.config.js 让 Webpack 拥有该加载器功能
+```js
+module.exports = {
+  // ...
+  module: {
+    // 加载器
+    rules: [
+      // 规则列表
+      {
+        test: /\.css$/i, // 匹配 .css 结尾的文件
+        use: ['style-loader', 'css-loader'], // 使用从后到前的加载器来解析 css 代码和插入到 DOM
+      },
+    ],
+  },
+}
+```
+>test用于匹配对应类型的文件,匹配到后就会用use里的loader从后往前去加载
+### 提取 css 代码
+>之前打包的css直接在js文件中,但是这样css文件无法被浏览器缓存
 
-   4. 准备 css 文件引入到 src/login/index.js 中（压缩转译处理等）
-
-      ```js
-      /**
-       * 目标5：打包 css 代码
-       *  5.1 准备 css 代码，并引入到 js 中
-       *  5.2 下载 css-loader 和 style-loader 本地软件包
-       *  5.3 配置 webpack.config.js 让 Webpack 拥有该加载器功能
-       *  5.4 打包后观察效果
-       */
-      // 5.1 准备 css 代码，并引入到 js 中
-      import 'bootstrap/dist/css/bootstrap.min.css'
-      import './index.css'
-      ```
-
-      > 注意：这里只是引入代码内容让 Webpack 处理，不需定义变量接收在 JS 代码中继续使用，所以没有定义变量接收
-
-   5. 下载 css-loader 和 style-loader 本地软件包
-
-      ```bash
-      npm i css-loader style-loader --save-dev
-      ```
-
-   6. 配置 webpack.config.js 让 Webpack 拥有该加载器功能
-
-      ```js
-      // ...
-      
-      module.exports = {
-        // ...
-        module: { // 加载器
-          rules: [ // 规则列表
-            {
-              test: /\.css$/i, // 匹配 .css 结尾的文件
-              use: ['style-loader', 'css-loader'], // 使用从后到前的加载器来解析 css 代码和插入到 DOM
-            }
-          ]
-        }
-      };
-      ```
-### 优化-提取 css 代码
-
-1. 需求：让 webpack 把 css 代码内容字符串单独提取到 dist 下的 css 文件中
-
-2. 需要：mini-css-extract-plugin 插件来实现
+要让 webpack 把 css 代码内容字符串单独提取到 dist 下的 css 文件中,需要：mini-css-extract-plugin 插件来实现
 
 3. 步骤：
 

@@ -2525,7 +2525,6 @@ v-model本质上是一个语法糖。例如应用在输入框上，就是value�
     <input :value="msg" @input="msg = $event.target.value" type="text">
   </div>
 </template>
-
 ```
 >**$event** 用于在模板中，获取事件的形参,即event对象
 ### 作用：
@@ -2624,6 +2623,16 @@ v-model其实就是 :value和@input事件的简写
 
 - 子组件：props通过value接收数据，事件触发 input
 - 父组件：v-model直接绑定数据
+1. **v-model工作原理**：
+    - 在Vue 3中，`v-model`默认使用`modelValue`作为prop，`update:modelValue`作为事件
+    - 当在子组件中修改值时，通过`$emit('update:modelValue', newValue)`通知父组件
+2. **多个v-model绑定**:
+    - Vue 3支持为单个组件绑定多个`v-model`
+    - 语法：`v-model:propName="data"`
+    - 子组件通过对应的prop接收，通过`update:propName`事件发送更新
+3. **与传统方式的对比**：
+    - 传统方式：使用`:value`和`@input`手动绑定
+    - v-model方式：更简洁，语义更清晰
 ### 代码示例
 
 子组件
@@ -3410,6 +3419,8 @@ App.vue
 </template>
 ```
 ## 作用域插槽
+>解决的主要是**插槽内容想使用子组件内部的数据**的问题
+>因为插槽内容最终是作用在子组件中的,但是书写在父组件中,无法访问子组件的数据
 ### 插槽分类
 - 默认插槽
 - 具名插槽
@@ -3522,7 +3533,6 @@ App.vue
       <template #default="obj">
         <button @click="del(obj)">删除</button>
       </template>
-      
     </MyTable>
     <MyTable :data="list2">
       <template #default="obj">
