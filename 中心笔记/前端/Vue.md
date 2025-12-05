@@ -3751,7 +3751,7 @@ vue-router 提供了一个全局组件 router-link (取代 ==a 标签==)
 - **能跳转**，配置 to 属性指定路径(**必须**) 。本质还是 a 标签 ，**to 无需 #**
 - **能高亮**，默认就会提供**高亮类名**，可以直接设置高亮样式
 
-语法： <router-link to="path的值">发现音乐</router-link>
+语法： `<router-link to="path的值">发现音乐</router-link>`
 
 ```vue
   <div>
@@ -4098,9 +4098,6 @@ const router = new VueRouter({
   ]
 })
 ```
-
-
-
 ## Vue路由-重定向
 
 ### 1.问题
@@ -4200,7 +4197,6 @@ export default router
 
 - hash路由(默认)        例如:  http://localhost:8080/#/home
 - history路由(常用)     例如: http://localhost:8080/home   (以后上线需要服务器端支持，开发环境webpack给规避掉了history模式的问题)
-
 ### 2.语法
 
 ```js
@@ -4209,9 +4205,6 @@ const router = new VueRouter({
     routes:[]
 })
 ```
-
-
-
 ## 编程式导航-两种路由跳转方式
 
 ### 1.问题

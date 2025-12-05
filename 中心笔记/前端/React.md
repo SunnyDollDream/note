@@ -1,7 +1,6 @@
 # React介绍
 React由Meta公司开发，是一个用于 构建Web和原生交互界面的库
 ![[Pasted image 20250923162435.png]]
-
 # 开发环境创建
 create-react-app是一个快速创建React开发环境的工具，底层由Webpack构件，封装了配置细节，开箱即用
 执行命令：
@@ -812,6 +811,7 @@ npm run start
 
 
 ## 2. 使用React Toolkit 创建 counterStore
+counterStore.js
 ```javascript
 import { createSlice } from '@reduxjs/toolkit'
 
@@ -833,7 +833,7 @@ const counterStore = createSlice({
   }
 })
 // 结构出actionCreater
-const { increment,decrement } = counter.actions
+const { increment,decrement } = counterStore.actions
 
 // 获取reducer函数
 const counterReducer = counterStore.reducer
@@ -842,7 +842,7 @@ const counterReducer = counterStore.reducer
 export { increment, decrement }
 export default counterReducer
 ```
-
+index.js
 ```javascript
 import { configureStore } from '@reduxjs/toolkit'
 
@@ -855,10 +855,9 @@ export default configureStore({
   }
 })
 ```
-
+>这个configureStore会返回一个根store,导出使用即可
 ## 3. 为React注入store
-> react-redux负责把Redux和React 链接 起来，内置 Provider组件 通过 store 参数把创建好的store实例注入到应用中，链接正式建立
-
+> react-redux负责把Redux和React 链接 起来，内置 Provider组件 通过 store 参数把创建好的store实例注入到应用中，链接正式建立,具体方法就是在项目的index.js中,使用`<Provider>`包裹`<App>`,将根store作为参数传递给Provider就可以了
 ```jsx
 import React from 'react'
 import ReactDOM from 'react-dom/client'
@@ -898,9 +897,9 @@ ReactDOM.createRoot(document.getElementById('root')).render(
 **实现步骤**
 
 1. 创建store的写法保持不变，配置好同步修改状态的方法
-2. 单独封装一个函数，在函数内部return一个新函数，在新函数中
-2.1 封装异步请求获取数据
-2.2 调用同步actionCreater传入异步数据生成一个action对象，并使用dispatch提交
+2. **单独封装**一个函数，在函数内部return一个新函数，在新函数中
+	1. 封装异步请求获取数据
+	2. 调用同步actionCreater传入异步数据生成一个action对象，并使用dispatch提交
 3. 组件中dispatch的写法保持不变
 
 **代码实现**
@@ -940,6 +939,7 @@ export { fetchChannelList }
 const channelReducer = channelStore.reducer
 export default channelReducer
 ```
+
 ```jsx
 import { useEffect } from 'react'
 import { useSelector, useDispatch } from 'react-redux'
@@ -965,6 +965,7 @@ export default App
 ```
 # Redux调试 - devtools
 > Redux官方提供了针对于Redux的调试工具，支持实时state信息展示，action提交信息查看等
+> [Redux DevTools - Microsoft Edge Addons](https://microsoftedge.microsoft.com/addons/detail/redux-devtools/anmpkbapfgpmemgdomlejpgljkoflifc)
 
 ![[Pasted image 20251010190246.png]]
 # 美团小案例
@@ -1358,3 +1359,99 @@ const onShow = () => {
 	onClick={() => setVisible(false)}
 />
 ```
+
+# 路由快速上手
+## 1. 什么是前端路由
+一个路径 path 对应一个组件 component 当我们在浏览器中访问一个 path 的时候，path 对应的组件会在页面中进行渲染
+
+![[Pasted image 20251205221952.png]]
+## 2. 创建路由开发环境
+```bash
+# 使用CRA创建项目
+npm create-react-app react-router-pro
+
+# 安装最新的ReactRouter包
+npm i react-router-dom
+
+# 启动项目
+npm run start
+```
+
+## 3. 快速开始
+![[Pasted image 20251205222056.png]]
+1. 使用createBrowserRouter创建路由对象
+2. 将入口文件中的<APP/>改为`<RouterProvider>`并将router传入(类似RouterView)
+```jsx
+import React from 'react'
+import ReactDOM from 'react-dom/client'
+
+const router = createBrowserRouter([
+  {
+    path:'/login',
+    element: <div>登录</div>
+  },
+  {
+    path:'/article',
+    element: <div>文章</div>
+  }
+])
+
+ReactDOM.createRoot(document.getElementById('root')).render(
+  <RouterProvider router={router}/>
+)
+```
+
+# 抽象路由模块
+![[Pasted image 20251205222848.png]]
+- page文件夹用于存放视图(类比vue的views),其中每一个视图都是一个文件夹,在文件夹内写index,js和css
+- router文件夹用于存放路由,其中是index.js
+# 路由导航
+## 1. 什么是路由导航
+路由系统中的多个路由之间需要进行路由跳转，并且在跳转的同时有可能需要传递参数进行通信
+![[Pasted image 20251205223838.png]]
+## 2. 声明式导航
+> 声明式导航是指通过在模版中通过 `<Link/> ` 组件描述出要跳转到哪里去，比如后台管理系统的左侧菜单通常使用这种方式进行
+
+![[Pasted image 20251205223903.png]]
+语法说明：通过给组件的to属性指定要跳转到路由path，组件会被渲染为浏览器支持的a链接，如果需要传参直接通过字符串拼接的方式拼接参数即可
+## 3. 编程式导航
+编程式导航是指通过 `useNavigate` 钩子得到导航方法，然后通过调用方法以命令式的形式进行路由跳转，比如想在登录请求完毕之后跳转就可以选择这种方式，更加灵活
+
+![[Pasted image 20251205223916.png]]
+
+语法说明：通过调用navigate方法传入地址path实现跳转
+# 导航传参
+>编程式和声明式都是直接写在路由里,用法是一样的
+![[Pasted image 20251205225414.png]]
+1. 在路由中凭借query参数或者path参数(path参数类似vue需要在路由配置中配置/:test配置占位符)
+2. 在目标组件中分别使用useSearchParams(用什么变量名解构都可以)和useParams获取参数即可
+# 嵌套路由配置
+## 1. 什么是嵌套路由
+在一级路由中又内嵌了其他路由，这种关系就叫做嵌套路由，嵌套至一级路由内的路由又称作二级路由，例如：
+![[Pasted image 20251205230546.png]]
+## 2. 嵌套路由配置
+实现步骤
+1. 使用 `children`属性配置路由嵌套关系  
+2. 使用 `<Outlet/>` 组件配置二级路由渲染位置(类似于`<routerView>`,react相当于把在根组件的和子组件的路由组件叫不一样的名字)
+![[Pasted image 20251205230609.png]]
+## 3. 默认二级路由
+当访问的是一级路由时，默认的二级路由组件可以得到渲染，只需要在二级路由的位置去掉path，设置index属性为true
+
+![[Pasted image 20251205230625.png]]
+## 4. 404路由配置
+场景：当浏览器输入url的路径在整个路由配置中都找不到对应的 path，为了用户体验，可以使用 404 兜底组件进行渲染
+
+实现步骤：
+
+1. 准备一个NotFound组件
+2. 在路由表数组的末尾，以*号作为路由path配置路由
+
+![[Pasted image 20251205230634.png]]
+## 5. 两种路由模式
+各个主流框架的路由常用的路由模式有俩种，history模式和hash模式, ReactRouter分别由 createBrowerRouter 和 createHashRouter 函数负责创建
+
+| 路由模式 | url表现 | 底层原理 | 是否需要后端支持 |
+| --- | --- | --- | --- |
+| history | url/login | history对象 + pushState事件 | 需要 |
+| hash | url/#/login | 监听hashChange事件 | 不需要 |
+
