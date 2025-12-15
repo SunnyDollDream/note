@@ -550,6 +550,59 @@ input 标签 type 属性值不同，则功能不同。
 5.  **提升可访问性 (Accessibility)**
     - 语义标签也对无障碍 (accessibility) 十分重要。屏幕阅读器 (screen reader) 能够通过语义元素更好地识别页面结构（例如导航区、主要内容、页脚等）。 
     - 更好的可访问性通常也意味着更好的用户体验 (UX)。而搜索引擎非常重视用户体验，因此间接也有 SEO 收益。
+## 特殊标签
+### meta标签
+`<meta>` 是 HTML `<head>` 内用于提供页面元数据（metadata）的标签。元数据不是页面内容本身，而是描述页面的信息，供浏览器、搜索引擎、社交平台或其他用户代理使用。它没有可见渲染（通常不会在页面中直接显示）。
+**必须放在 `<head>` 内（放在其他地方浏览器可能忽略或行为不确定）。**
+#### 常见属性说明
+1. `charset`
+定义文档字符编码。**应尽可能放在 `<head>` 的最前面**（早于 CSS/JS/其他 meta），以便浏览器正确解析HTML。
+`<meta charset="utf-8">`
+>注意：在老浏览器或某些环境下，浏览器通常要求在文档开头的前 1024 字节内出现编码声明，否则可能无法正确识别。
+2. `name` + `content`
+最常见的形式，用于提供多种元信息。
+- `viewport`：响应式移动设备所必需。
+    `<meta name="viewport" content="width=device-width, initial-scale=1">`
+    常见扩展：`maximum-scale=1, user-scalable=no`（但一般建议允许缩放以利无障碍）。
+- `description`：页面摘要，搜索引擎常在搜索结果中显示（长度通常在 150–160 字左右）。
+    `<meta name="description" content="这是页面的简短描述...">`
+- `keywords`：关键词列表（现在搜索引擎多数忽略，但某些系统仍可能使用）。
+    `<meta name="keywords" content="HTML, meta, 教程">`
+- `robots`：指示搜索引擎爬虫如何索引页面与跟踪链接。
+    `<meta name="robots" content="index, follow">  `
+    `<meta name="robots" content="noindex, nofollow">`
+    也可针对特定爬虫：`googlebot`、`bingbot` 等。
+- `referrer`：控制通过 Referer 头发送的引用信息，例如 `no-referrer`, `origin`, `strict-origin-when-cross-origin`。
+- `theme-color`：用于移动浏览器（如 Chrome）设置地址栏/工具栏颜色。
+    `<meta name="theme-color" content="#ffffff">`
+- `author`、`application-name` 等元信息也常见，主要供工具或平台使用。
+3. `http-equiv`
+模拟 HTTP 响应头的元信息，浏览器会把它当作来自服务器的头来处理（注意并非所有头都可用或建议使用）。
+- `Content-Type`（已被 `charset` 取代）：
+    `<meta http-equiv="Content-Type" content="text/html; charset=utf-8">`
+- `X-UA-Compatible`（IE 兼容模式）：
+    `<meta http-equiv="X-UA-Compatible" content="IE=edge">`
+- `refresh`（页面刷新/跳转——通常**不推荐**用于 SEO/可访问性）：
+    `<meta http-equiv="refresh" content="5;url=https://example.com/">`
+- `Content-Security-Policy`（可以通过 `<meta>` 设置简单的 CSP，但更建议通过 HTTP 头）：
+    `<meta http-equiv="Content-Security-Policy" content="default-src 'self'">`
+4. 社交平台与开放图（Open Graph）/Twitter Card
+社交平台抓取页面时常用 meta（注意：这些用 `property` 或自定义 `name`，不是标准 `name`
+```html
+<meta property="og:title" content="页面标题">
+<meta property="og:description" content="页面描述">
+<meta property="og:image" content="https://example.com/image.jpg">
+<meta name="twitter:card" content="summary_large_image">
+```
+这些能控制分享到 Facebook、Twitter、微信等平台时显示的标题、摘要和缩略图。
+#### 使用顺序与最佳实践
+1. **把 `<meta charset>` 放最前面**（或至少在任何外部资源之前），以避免编码错误。
+2. 使用 `viewport` 来保证移动设备显示正常。
+3. 使用简洁且有针对性的 `description`（对 SEO 与点击率有帮助）。
+4. 避免用 `<meta http-equiv="refresh">` 做强制跳转；使用服务器端重定向更合适。
+5. 对安全策略（CSP）优先通过服务器头发送，只有在无法配置服务器时才使用 `<meta http-equiv="Content-Security-Policy">`。
+6. 为社交分享准备 Open Graph / Twitter Card 元数据（视目标平台而定）。
+7. 不要把隐私敏感信息放在 meta 中（它们通常可被爬虫读取）。
 ## 字符实体
 
 | 显示结果 | 描述  | 实体名称    |
