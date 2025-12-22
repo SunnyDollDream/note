@@ -149,27 +149,83 @@ src用于指定图像的位置和名称，是<img>的必须属性。
 <a href="https://www.baidu.com">跳转到百度</a>
 ```
 **href 属性值是跳转地址，是超链接的必须属性。**(也可以填本地的文件,比如html和图片)
-超链接==默认是在当前窗口跳转页面==，添加 **target="(下划线)blank"** 实现**新窗口**打开页面。
+超链接==默认是在当前窗口跳转页面==，添加 **`target="_blank"`** 实现**新窗口**打开页面。
 >target属性还可以跟iframe的name,这样点击超链接后的新窗口会在iframe元素中打开(target就是打开这个链接的地方)
 
+**常用属性**
+1. target
+常见取值：
+
+| 值         | 说明                |
+| --------- | ----------------- |
+| `_self`   | 当前窗口（默认）          |
+| `_blank`  | 新窗口 / 新标签         |
+| `_parent` | 父 frame           |
+| `_top`    | 顶级窗口              |
+| 自定义 name  | 指向 frame / iframe |
+2. `rel`（安全与语义非常重要）
+```html
+<a href="..." target="_blank" rel="noopener noreferrer">
+```
+- 为什么需要 `rel`？
+	当使用 `_blank` 时：
+	- 新页面可以通过 `window.opener` 操作原页面
+	- 存在安全风险（tabnabbing）
+- 常见值
+
+| 值            | 作用          |
+| ------------ | ----------- |
+| `noopener`   | 阻断 opener   |
+| `noreferrer` | 不发送 Referer |
+| `nofollow`   | SEO：不传递权重   |
+| `external`   | 外部链接        |
+| `ugc`        | 用户生成内容      |
+3. download
+```html
+<a href="/file.zip" download>下载文件</a>
+<a href="/file.zip" download="demo.zip">重命名</a>
+```
+- 强制下载而非打开
+- 受同源策略限制
+ 4. `title`
+`<a title="查看详情">详情</a>`
+- 悬浮提示
+- 不建议承载核心信息（可访问性差）
 拓展：开发初期，不确定跳转地址，则 href 属性值写为 **#**，表示**空链接**，页面不会跳转，在当前页面刷新一次。
 ```html
 <a href="https://www.baidu.com/">跳转到百度</a>
-
+<a href="/user/list">站内链接</a>
 <!-- 跳转到本地文件：相对路径查找 --> 
 <!-- target="_blank" 新窗口跳转页面 --> 
 <a href="./01-标签的写法.html" target="_blank">跳转到01-标签的写法</a>
-
+<a href="/files/report.pdf">下载</a>
 <!-- 开发初期，不知道超链接的跳转地址，href属性值写#，表示空链接，不会跳转 -->
 <a href="#">空链接</a>
 ```
+>`#`和`""`的区别
+>#	跳到顶部（hash 变化）
+>""	重新请求当前 URL
+
 href标签还可以带邮箱地址和锚点链接
 ```html
 <a href="mailto:19374292610@163.com">给我写信</a>
 <!-- 需要设备上有邮箱的客户端才能打开 --> 
-<a href="#">空链接</a>
+<a href="tel:10086">拨号</a>
 
-<a href="#">空链接</a>
+<a href="#section1">跳转到某一节</a>
+
+<h2 id="section1">第一节</h2>
+```
+>锚点的本质: 修改 URL 的 hash,不刷新页面
+
+`<a>`标签还可以内嵌元素,此时内嵌元素的整个占用区域都会被认为是`<a>`的交互区域
+```html
+  <a href="/detail">
+    <div class="card">
+      <h3>标题</h3>
+      <p>描述</p>
+    </div>
+  </a>
 ```
 #### 内联框架元素
 **`<iframe>`** **HTML**元素代表嵌套的**浏览上下文** ，将另一个 HTML 页面嵌入到当前页面中。
@@ -390,11 +446,48 @@ href标签还可以带邮箱地址和锚点链接
 ```
 > 注意：不能跨表格结构标签合并单元格（thead、tbody、tfoot）。
 #### 表单
-作用：收集用户信息。
+```html
+<form action="/login" method="post">
+  <!-- 表单控件 -->
+</form>
+```
+功能:
+1. **定义一次表单提交的边界**（哪些控件属于同一次提交）
+2. **收集表单控件的值**（name → value）
+3. **按照指定方式向服务器发起请求**
+可以理解为：
+> `<form>` 是一个“请求生成器”，而不是一个普通容器。
+
 使用场景：
 - 登录页面
 - 注册页面
 - 搜索区域
+常见属性:
+1. `action`
+	- **含义**：表单提交的目标 URL
+	- 若省略：
+	    - 提交到 **当前页面地址**
+2. `method`
+	 - **GET**
+	    - 数据拼接在 URL 查询串中
+	    - 有长度限制
+	    - 可被缓存、收藏
+	    - 适合：查询、筛选
+	- **POST**
+	    - 数据放在请求体中
+	    - 理论上无限制
+	    - 不直接暴露在 URL
+	    - 适合：登录、提交表单、修改数据
+3. `enctype`（提交数据的编码方式）
+	- 常见值：
+
+| 值                                   | 用途           |
+| ----------------------------------- | ------------ |
+| `application/x-www-form-urlencoded` | 默认，普通表单      |
+| `multipart/form-data`               | **文件上传必须使用** |
+| `text/plain`                        | 调试用，很少使用     |
+
+> **只有具备 `name` 属性的表单控件，才会被提交**
 ##### input 标签
 input 标签 type 属性值不同，则功能不同。
 ```html
@@ -410,81 +503,59 @@ input 标签 type 属性值不同，则功能不同。
 | file     | 上传文件         |
 | email    | 会判断输入内容是否为邮箱 |
 | date     | 日期           |
+常用属性：
+
+| 属性            | 作用            |
+| ------------- | ------------- |
+| `name`        | 提交字段名         |
+| `value`       | 默认值           |
+| `placeholder` | 占位提示          |
+| `required`    | 必填            |
+| `readonly`    | 只读            |
+| `disabled`    | 禁用（**不会被提交**） |
 >input默认就一个框,前面的文字需要自己手动加
 ```html
 文本框: <input type="text">
 ```
-###### input 标签占位文本
-占位文本：提示信息，文本框和密码框都可以使用(就是那个没有内容的时候的虚内容)。
+###### 单选框
 ```html
-<input type="..." placeholder="提示信息">
-```
-##### 单选框
-```html
-<input type="radio" name="gender" checked> 男
-<input type="radio" name="gender"> 女
+<input type="radio" name="gender" value="male" checked> 男
+<input type="radio" name="gender" value="female"> 女
 ```
 >单选框和文本框一样,要带提示信息都得额外写
 
 常用属性
 
-| 属性名     | 作用   | 特殊说明                                  |
-| ------- | ---- | ------------------------------------- |
-| name    | 控件名称 | 控件==分组==,同组中只能选中一(单选功能)(不是显示这个选项代表什么) |
-| checked | 默认选中 | 属性名和属性值一样,简写为一个单词                     |
+| 属性名     | 作用   | 特殊说明                                   |
+| ------- | ---- | -------------------------------------- |
+| name    | 控件名称 | 控件==分组==,同组中只能选中一个(单选功能)(不是显示这个选项代表什么) |
+| checked | 默认选中 | 属性名和属性值一样,简写为一个单词                      |
 
 > 提示：name 属性值自定义。
-##### 上传文件
+###### 上传文件
 默认情况下，文件上传表单控件只能上传一个文件，添加 multiple 属性可以实现文件多选功能。
 ```html
-<input type="file" multiple>
+<input type="file" name="avatar" multiple>
 ```
 多选要自己在上传文件时按Shift选中多个文件,并不是可以多次点击传不同的文件
-##### 多选框
+###### 多选框
 多选框也叫复选框，默认选中：checked。
 ```html
 <input type="checkbox" checked> 敲前端代码
 ```
-#### 下拉菜单
-标签：select 嵌套 option，select 是下拉菜单整体，option是下拉菜单的每一项。
+###### 隐藏字段（hidden）
+`<input type="hidden" name="userId" value="123">`
+- 不显示
+- 常用于：
+    - 传递状态
+    - CSRF Token
+    - 业务上下文信息
+###### 提交与重置
 ```html
-<select>
-  <option>北京</option>
-  <option>上海</option>
-  <option>广州</option>
-  <option>深圳</option>
-  <option selected>武汉</option>
-</select>
+<input type="submit" value="提交">
+<input type="reset" value="重置">
 ```
-> 默认显示第一项，**selected** 属性实现**默认选中**功能。
-#### 文本域
-作用：多行输入文本的表单控件。
-![[Pasted image 20250423210957.png]]
-```html
-<textarea>默认提示文字</textarea>
-```
-> 注意点：
-> - 实际开发中，使用 CSS 设置 文本域的尺寸
-> - 实际开发中，一般禁用右下角的拖拽功能
-> - 这个标签中间的提示文字不是虚文字,是预置在文本框里的,双标签之间不应该换行,否则会多好几个空格
-#### label 标签
-作用：网页中，某个标签的说明文本。
-![[Pasted image 20250423211030.png]]
-经验：用 label 标签绑定文字和表单控件的关系，增大表单控件的点击范围。
-![[Pasted image 20250423211038.png]]
-- 写法一
-    - label 标签只包裹内容，==不包裹表单控件==
-    - 设置 label 标签的 for 属性值 和表单控件的 ==id== 属性值相同
-```html
-<input type="radio" id="man">
-<label for="man">男</label>
-```
-- 写法二：使用 label 标签包裹文字和表单控件，不需要属性
-```html
-<label><input type="radio"> 女</label>
-```
-> 提示：支持 label 标签增大点击范围的表单控件：文本框、密码框、上传文件、单选框、多选框、下拉菜单、文本域等等。
-#### 按钮
+##### 按钮
 ```html
 <button type="">按钮</button>
 ```
@@ -511,6 +582,65 @@ input 标签 type 属性值不同，则功能不同。
 </form>
 ```
 > 提示：按钮需配合 ==form 标签==（表单区域）才能实现对应的功能。(需要把button和表单放在一个form里才行)
+##### 文本域
+作用：多行输入文本的表单控件。
+![[Pasted image 20250423210957.png]]
+```html
+<textarea name="content" rows="5" cols="30">默认提示文字</textarea>
+```
+> 注意点：
+> - 实际开发中，使用 CSS 设置 文本域的尺寸
+> - 实际开发中，一般禁用右下角的拖拽功能
+> - 这个标签中间的提示文字不是虚文字,是预置在文本框里的,双标签之间不应该换行,否则会多好几个空格
+##### 下拉菜单
+标签：select 嵌套 option，select 是下拉菜单整体，option是下拉菜单的每一项。
+```html
+<select name="city">
+  <option value="bj">北京</option>
+  <option value="sh">上海</option>
+  <option value="gz">广州</option>
+  <option value="sz">深圳</option>
+  <option value="wh" selected>武汉</option>
+</select>
+```
+> 默认显示第一项，**selected** 属性实现**默认选中**功能。
+> **multiple**属性实现多选
+
+##### label 标签
+作用：网页中，某个标签的说明文本。
+![[Pasted image 20250423211030.png]]
+经验：用 label 标签绑定文字和表单控件的关系，增大表单控件的点击范围。
+![[Pasted image 20250423211038.png]]
+- 写法一
+    - label 标签只包裹内容，==不包裹表单控件==
+    - 设置 label 标签的 for 属性值 和表单控件的 ==id== 属性值相同
+```html
+<input type="radio" id="man">
+<label for="man">男</label>
+```
+- 写法二：使用 label 标签包裹文字和表单控件，不需要属性
+```html
+<label><input type="radio"> 女</label>
+```
+> 提示：支持 label 标签增大点击范围的表单控件：文本框、密码框、上传文件、单选框、多选框、下拉菜单、文本域等等。
+##### 表单提交的默认行为
+**浏览器会做什么？**
+当点击提交按钮时：
+
+1. 触发表单校验（required、pattern 等）
+2. 收集所有 **未 disabled 且有 name 的控件**
+3. 按 `method + action + enctype` 发起请求
+4. 页面跳转（刷新）
+**如何阻止默认提交？**
+```html
+<form onsubmit="return false;">
+```
+或 JS：
+```js
+form.addEventListener('submit', e => {
+  e.preventDefault();
+})
+```
 #### 语义化
 ##### 无语义的布局标签
 作用：布局网页（划分网页区域，摆放内容）
@@ -611,3 +741,82 @@ input 标签 type 属性值不同，则功能不同。
 | <    | 小于号 | \&lt;   |
 | >    | 大于号 | \&gt    |
 >在代码中敲空格不论输入几个显示时都只会识别成一个
+
+## `<frameset>/<frame>`(已废弃)
+`<frameset>` 和 `<frame>` 是 **HTML 4 时代用于把浏览器窗口切分为多个独立文档区域的机制**。
+它们的设计目标是：
+- 一个浏览器窗口
+- 同时显示多个 **完全独立的 HTML 文档**
+- 每个区域都可以单独加载、刷新、跳转
+这是**早期 Web 对“多视图布局”的解决方案**。
+### `<frameset>`：页面结构的替代者
+1. `<frameset>` 的本质
+`<frameset>` **不是普通容器**，它是：
+- 用来**替代 `<body>` 的**
+- 定义页面的“分割方式”
+⚠ 一个 HTML 文档中：
+- **要么使用 `<body>`**
+- **要么使用 `<frameset>`**
+- 二者不能共存
+2. 基本结构示例
+```html
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Frameset 示例</title>
+  </head>
+
+  <frameset cols="30%,70%">
+    <frame src="menu.html">
+    <frame src="content.html">
+  </frameset>
+</html>
+```
+含义：
+- 浏览器窗口被 **纵向切成两列**
+- 左边 30%，右边 70%
+- 每一列加载一个独立 HTML 文档
+>切分时使用`*`占位符可以使对应的部分占据剩余空间
+3. 嵌套 frameset
+```html
+<frameset rows="20%,80%">
+  <frame src="header.html">
+  <frameset cols="30%,70%">
+    <frame src="menu.html">
+    <frame src="content.html">
+  </frameset>
+</frameset>
+```
+### `<frame>`：真正加载内容的单元
+1. `<frame>` 的作用
+`<frame>` 表示 **frameset 切出来的一个“窗口”，用于加载一个 HTML 文档**
+它本身 **不包含内容**，只负责加载外部页面。
+2. 常见属性
+```html
+<frame src="menu.html" name="menuFrame">
+```
+- `src`
+	- 加载的页面地址
+- `name`（非常重要）
+	- 用于 **链接的 target 指向**
+	- 实现“点击左边，右边刷新”
+- `scrolling`
+	`<frame scrolling="yes | no | auto">`
+	- 是否显示滚动条
+- noresize
+	- 禁止用户拖拽调整 frame 大小
+- `frameborder`（旧属性）
+	`<frame frameborder="0">`
+	- 控制边框显示
+	- 非 CSS 时代的产物
+### 与 `<iframe>` 的本质区别（非常重要）
+
+|对比点|frame / frameset|iframe|
+|---|---|---|
+|是否废弃|是|否|
+|是否替代 body|是|否|
+|布局方式|切分窗口|普通元素|
+|CSS 控制|极弱|完全支持|
+|SEO|极差|可控|
+|使用场景|已淘汰|嵌入第三方内容|
+> frameset 是“页面级切割”，iframe 是“页面内嵌”。

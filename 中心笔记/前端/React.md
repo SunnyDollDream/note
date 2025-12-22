@@ -1746,8 +1746,9 @@ export default Login
 **实现步骤**
 
 1. 为 Form 组件添加 `validateTrigger` 属性，指定校验触发时机的集合,这个配置是对整个表单的每一项生效的,但是触发还是各自有各自的,比如有俩输入框,那个失焦了就会校验,另一个不会
-2. **为 Form.Item 组件添加 name 属性**,对应后端字段名
-3. 为 Form.Item 组件添加 `rules` 属性，用来添加表单校验规则对象,有多条规则时会依次校验,直到有一条不满足,后边的就不会校验了
+2. 使用`const [form] = Form.useForm()`解构出form组件的对象,是Ref钩子的封装,可以通过这个对象调用表单的方法
+3. **为 Form.Item 组件添加 name 属性**,对应后端字段名
+4. 为 Form.Item 组件添加 `rules` 属性，用来添加表单校验规则对象,有多条规则时会依次校验,直到有一条不满足,后边的就不会校验了
 	- required: 是否必须
 	- pattern: 满足正则匹配(==正则表达式不需要加引号==)
 **代码实现**
@@ -3400,8 +3401,10 @@ return (
 	- title: 该列表头
 	- dataIndex: 对应数据列表中对象的字段名
 	- width: 该列所占宽度
-	- render: 渲染函数,有一个data参数,是对应数据中的字段值,可以自己选择如何渲染出来
+	- render: 渲染函数,有一个data参数,是对应的该条数据对象整体,可以自己选择如何渲染出来
 - dataSource: 渲染表格的数据
+- pagination: 分页配置项,传入一个对象,其中有total和pageSize属性
+- onChange: 回调函数,切换页数时触发,有一参数为{current(当前页码),pageSize(每页显示个数),total(总条数)}
 **实现步骤**
 
 1. 声明列表相关数据管理
@@ -3452,6 +3455,7 @@ const Article = ()=>{
 }
 ```
 ### 筛选功能实现
+>日历组件给出的是封装好的日期对象,其中有方法format可以指定格式化
 
 **实现步骤**
 
@@ -3518,6 +3522,26 @@ return (
 ```
 ### 删除功能
 ![[Pasted image 20251215224209.png]]
+**Popconfirm**
+目标元素的操作需要用户进一步的确认时，在目标元素附近弹出浮层提示，询问用户。
+```html
+      <Popconfirm
+        title="Delete the task"
+        description="Are you sure to delete this task?"
+        onConfirm={confirm}
+        onCancel={cancel}
+        okText="Yes"
+        cancelText="No"
+      >
+        <Button danger>Delete</Button>
+      </Popconfirm>
+```
+- title: 气泡标题
+- description: 气泡正文
+- onConfirm: 点击确认时的回调
+- onCancel: 点击取消时的回调
+- okText: 确认按钮上的文本
+- cancelText: 取消按钮上的文本
 **实现步骤**
 
 1. 给删除文章按钮绑定点击事件
@@ -3583,4 +3607,1272 @@ const columns = [
   }
 ]
 ```
+## 编辑文章
+### 基础数据回填
+![[Pasted image 20251217164430.png]]
+```jsx
+const Publish = ()=>{
+  // 回填数据
+  const [searchParams] = useSearchParams()
+  const articleId = searchParams.get('id')
+  const [form] = Form.useForm()
+  useEffect(() => {
+    async function getArticle () {
+      const res = await http.get(`/mp/articles/${articleId}`)
+      const { cover, ...formValue } = res.data
+      // 设置表单数据
+      form.setFieldsValue({ ...formValue, type: cover.type })
+    }
+    if (articleId) {
+      // 拉取数据回显
+      getArticle()
+    }
+  }, [articleId, form])
+
+  return (
+     <Form form={form}/>
+  )
+}
+```
+
+### 回填封面信息
+![[Pasted image 20251217164440.png]]
+```javascript
+useEffect(() => {
+  async function getArticle () {
+    const res = await http.get(`/mp/articles/${articleId}`)
+    const { cover, ...formValue } = res.data
+    // 1. 回填表单数据
+    form.setFieldsValue({ ...formValue, type: cover.type })
+    // 2. 回填封面图片
+    setImageType(cover.type) // 封面类型
+    setImageList(cover.images.map(url => ({ url }))) // 封面list
+  }
+  if (articleId) {
+    getArticle()
+  }
+}, [articleId, form])
+```
+
+### 适配不同状态下的文案
+```jsx
+<Card
+  title={
+    <Breadcrumb items={[
+      { title: <Link to={'/'}>首页</Link> },
+      { title: `${articleId ? '编辑文章' : '发布文章'}` },
+    ]}
+    />
+  }
+>
+
+{articleId ? '更新文章' : '发布文章'}
+```
+
+### 更新文章
+```jsx
+ // 发布文章
+  const onFinish = async (formValue) => {
+    const { channel_id, content, title } = formValue
+    const formatUrl = (list) => {
+      return list.map(item => {
+        if (item.response) {
+          return item.response.data.url
+        } else {
+          return item.url
+        }
+      })
+    }
+    const data = {
+      channel_id,
+      content,
+      title,
+      type: imageType,
+      cover: {
+        type: imageType,
+        images: formatUrl(imageList)
+      }
+    }
+    if (imageType !== imageList.length) return message.warning('图片类型和数量不一致')
+    if (articleId) {
+      // 编辑
+      await http.put(`/mp/articles/${articleId}?draft=false`, data)
+    } else {
+      // 新增
+      await http.post('/mp/articles?draft=false', data)
+    }
+    message.success(`${articleId ? '编辑' : '发布'}文章成功`)
+  }
+```
+
+## 项目打包
+```bash
+npm run build
+```
+
+![[Pasted image 20251217180456.png]]
+### 项目本地预览
+**实现步骤**
+
+1. 全局安装本地服务包 `npm i -g serve`  该包提供了serve命令，用来启动本地服务器
+2. 在项目根目录中执行命令 `serve -s ./build`  在build目录中开启服务器
+3. 在浏览器中访问：`http://localhost:3000/` 预览项目
+
+![[Pasted image 20251217180503.png]]
+
+### 优化-路由懒加载
+**使用步骤**
+
+1. 使用 lazy 方法导入路由组件
+2. 使用内置的 Suspense 组件渲染路由组件
+
+>suspend组件还有一个fallback属性,可以传入在加载时要显示什么
+
+**代码实现**
+`router/index.js`
+```jsx
+import { createBrowserRouter } from 'react-router-dom'
+import { lazy, Suspense } from 'react'
+import Login from '@/pages/Login'
+import Layout from '@/pages/Layout'
+
+import AuthRoute from '@/components/Auth'
+
+const Publish = lazy(() => import('@/pages/Publish'))
+const Article = lazy(() => import('@/pages/Article'))
+const Home = lazy(() => import('@/pages/Article'))
+
+
+const router = createBrowserRouter([
+  {
+    path: '/',
+    element: (
+      <AuthRoute>
+        <Layout />
+      </AuthRoute>
+    ),
+    children: [
+      {
+        index: true,
+        element: (
+          <Suspense fallback={'加载中'}>
+            <Home />
+          </Suspense>
+        )
+      },
+      {
+        path: 'article',
+        element: (
+          <Suspense fallback={'加载中'}>
+            <Article />
+          </Suspense>
+        )
+      },
+      {
+        path: 'publish',
+        element: (
+          <Suspense fallback={'加载中'}>
+            <Publish />
+          </Suspense>
+        )
+      },
+    ],
+  },
+  {
+    path: '/login',
+    element: <Login />,
+  },
+])
+
+export default router
+```
+
+**查看效果**
+我们可以在打包之后，通过切换路由，监控network面板资源的请求情况，验证是否分隔成功
+### 打包-打包体积分析
+**业务背景**
+通过分析打包体积，才能知道项目中的哪部分内容体积过大，方便知道哪些包如何来优化
+**使用步骤**
+
+1. 安装分析打包体积的包：`npm i source-map-explorer`
+2. 在 package.json 中的 scripts 标签中，添加分析打包体积的命令
+3. 对项目打包：`npm run build`（如果已经打过包，可省略这一步）
+4. 运行分析命令：`npm run analyze`
+5. 通过浏览器打开的页面，分析图表中的包体积
+
+**核心代码**：
+```json
+"scripts": {
+  "analyze": "source-map-explorer 'build/static/js/*.js'",
+}
+```
+![[Pasted image 20251217180514.png]]
+### 优化-配置CDN
+**哪些资源可以放到CDN服务器？**
+体积较大的非业务JS文件, 比如react、react-dom
+1. 体积较大，需要利用CDN文件在浏览器的缓存特性，加快加载时间
+2. 非业务JS文件，不需要经常做变动，CDN不用频繁更新缓存
+**项目中怎么做？**
+3. 把需要做CDN缓存的文件排除在打包之外（react、react-dom）
+4. 以CDN的方式重新引入资源（react、react-dom）
+**分析说明**：通过 craco 来修改 webpack 配置，从而实现 CDN 优化
+**核心代码**
+`craco.config.js`
+```javascript
+// 添加自定义对于webpack的配置
+
+const path = require('path')
+const { whenProd, getPlugin, pluginByName } = require('@craco/craco')
+
+module.exports = {
+  // webpack 配置
+  webpack: {
+    // 配置别名
+    alias: {
+      // 约定：使用 @ 表示 src 文件所在路径
+      '@': path.resolve(__dirname, 'src')
+    },
+    // 配置webpack
+    // 配置CDN
+    configure: (webpackConfig) => {
+      let cdn = {
+        js:[]
+      }
+      whenProd(() => {
+        // key: 不参与打包的包(由dependencies依赖项中的key决定)
+        // value: cdn文件中 挂载于全局的变量名称 为了替换之前在开发环境下
+        webpackConfig.externals = {
+          react: 'React',
+          'react-dom': 'ReactDOM'
+        }
+        // 配置现成的cdn资源地址
+        // 实际开发的时候 用公司自己花钱买的cdn服务器
+        cdn = {
+          js: [
+            'https://cdnjs.cloudflare.com/ajax/libs/react/18.1.0/umd/react.production.min.js',
+            'https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.1.0/umd/react-dom.production.min.js',
+          ]
+        }
+      })
+
+      // 通过 htmlWebpackPlugin插件 在public/index.html注入cdn资源url
+      const { isFound, match } = getPlugin(
+        webpackConfig,
+        pluginByName('HtmlWebpackPlugin')
+      )
+
+      if (isFound) {
+        // 找到了HtmlWebpackPlugin的插件
+        match.userOptions.files = cdn
+      }
+
+      return webpackConfig
+    }
+  }
+}
+```
+
+`public/index.html`
+```html
+<body>
+  <div id="root"></div>
+  <!-- 加载第三发包的 CDN 链接 -->
+  <% htmlWebpackPlugin.options.files.js.forEach(cdnURL => { %>
+    <script src="<%= cdnURL %>"></script>
+  <% }) %>
+</body>
+```
+# useReducer
+>有点类似把状态和修改状态的方法封装在一起了
+## 基础使用
+作用: 和useState的作用类似，用来管理相对复杂的状态数据,即让 React 管理多个**相对关联**的状态数据
+1. 定义一个reducer函数（根据不同的action返回不同的新状态,分支语句if,switch都可以,重要的是根据不同action.type返回不同的状态）
+2. 在组件中调用useReducer，并传入reducer函数和状态的初始值
+3. 事件发生时，通过dispatch函数分派一个action对象（通知reducer要返回哪个新状态并渲染UI）
+```jsx
+import { useReducer } from 'react'
+
+// 1. 定义reducer函数，根据不同的action返回不同的新状态
+function reducer(state, action) {
+  switch (action.type) {
+    case 'INC':
+      return state + 1
+    case 'DEC':
+      return state - 1
+    default:
+      return state
+  }
+}
+
+function App() {
+  // 2. 使用useReducer分派action,第一个参数为reducer函数,第二个为状态初始值
+  const [state, dispatch] = useReducer(reducer, 0)
+  return (
+    <>
+      {/* 3. 调用dispatch函数传入action对象 触发reducer函数，分派action操作，使用新状态更新视图 */}
+      <button onClick={() => dispatch({ type: 'DEC' })}>-</button>
+      {state}
+      <button onClick={() => dispatch({ type: 'INC' })}>+</button>
+    </>
+  )
+}
+
+export default App
+```
+
+## 更新流程
+![[Pasted image 20251217194220.png]]
+## action传参
+> 做法：分派action时如果想要传递参数，需要在action对象中添加一个payload参数，放置状态参数
+
+```jsx
+// 定义reducer
+
+import { useReducer } from 'react'
+
+// 1. 根据不同的action返回不同的新状态
+function reducer(state, action) {
+  console.log('reducer执行了')
+  switch (action.type) {
+    case 'INC':
+      return state + 1
+    case 'DEC':
+      return state - 1
+    case 'UPDATE':
+      return state + action.payload
+    default:
+      return state
+  }
+}
+
+function App() {
+  // 2. 使用useReducer分派action
+  const [state, dispatch] = useReducer(reducer, 0)
+  return (
+    <>
+      {/* 3. 调用dispatch函数传入action对象 触发reducer函数，分派action操作，使用新状态更新视图 */}
+      <button onClick={() => dispatch({ type: 'DEC' })}>-</button>
+      {state}
+      <button onClick={() => dispatch({ type: 'INC' })}>+</button>
+      <button onClick={() => dispatch({ type: 'UPDATE', payload: 100 })}>
+        update to 100
+      </button>
+    </>
+  )
+}
+
+export default App
+```
+
+# useMemo
+>类似Vue的computed
+
+作用：它在每次重新渲染的时候能够缓存计算的结果
+## 看个场景
+下面我们的本来的用意是想**基于count的变化计算斐波那契数列之和**，但是当我们修改无关的num状态的时候，斐波那契求和函数也会被**重新**执行，显然是一种浪费
+```jsx
+// useMemo
+// 作用：在组件渲染时缓存计算的结果
+
+import { useState } from 'react'
+
+function factorialOf(n) {
+  console.log('斐波那契函数执行了')
+  return n <= 0 ? 1 : n * factorialOf(n - 1)
+}
+
+function App() {
+  const [count, setCount] = useState(0)
+  // 计算斐波那契之和
+  const sumByCount = factorialOf(count)
+
+  const [num, setNum] = useState(0)
+
+  return (
+    <>
+      {sum}
+      <button onClick={() => setCount(count + 1)}>+count:{count}</button>
+      <button onClick={() => setNum(num + 1)}>+num:{num}</button>
+    </>
+  )
+}
+
+export default App
+```
+## useMemo缓存计算结果
+> 思路: 只有count发生变化时才重新进行计算
+
+```jsx
+import { useMemo, useState } from 'react'
+
+function fib (n) {
+  console.log('计算函数执行了')
+  if (n < 3) return 1
+  return fib(n - 2) + fib(n - 1)
+}
+
+function App() {
+  const [count, setCount] = useState(0)
+  // 计算斐波那契之和
+  // const sum = fib(count)
+  // 通过useMemo缓存计算结果，只有count发生变化时才重新计算
+  const sum = useMemo(() => {
+    return fib(count)
+  }, [count])
+
+  const [num, setNum] = useState(0)
+
+  return (
+    <>
+      {sum}
+      <button onClick={() => setCount(count + 1)}>+count:{count}</button>
+      <button onClick={() => setNum(num + 1)}>+num:{num}</button>
+    </>
+  )
+}
+
+export default App
+```
+# React.memo
+作用：允许组件在props没有改变的情况下跳过重新渲染
+## 组件默认的渲染机制
+> 默认机制：顶层组件发生重新渲染，这个组件树的子级组件都会被重新渲染
+
+```jsx
+// memo
+// 作用：允许组件在props没有改变的情况下跳过重新渲染
+
+import { useState } from 'react'
+
+function Son() {
+  console.log('子组件被重新渲染了')
+  return <div>this is son</div>
+}
+
+function App() {
+  const [, forceUpdate] = useState()
+  console.log('父组件重新渲染了')
+  return (
+    <>
+      <Son />
+      <button onClick={() => forceUpdate(Math.random())}>update</button>
+    </>
+  )
+}
+
+export default App
+```
+## 使用React.memo优化
+> 机制：只有props发生变化时才重新渲染
+> 下面的子组件通过 memo 进行包裹之后，返回一个新的组件MemoSon, 只有传给MemoSon的props参数发生变化时才会重新渲染
+
+```jsx
+import React, { useState } from 'react'
+
+const MemoSon = React.memo(function Son() {
+  console.log('子组件被重新渲染了')
+  return <div>this is span</div>
+})
+
+function App() {
+  const [, forceUpdate] = useState()
+  console.log('父组件重新渲染了')
+  return (
+    <>
+      <MemoSon />
+      <button onClick={() => forceUpdate(Math.random())}>update</button>
+    </>
+  )
+}
+
+export default App
+```
+## props变化重新渲染
+```jsx
+import React, { useState } from 'react'
+
+const MemoSon = React.memo(function Son() {
+  console.log('子组件被重新渲染了')
+  return <div>this is span</div>
+})
+
+function App() {
+  console.log('父组件重新渲染了')
+
+  const [count, setCount] = useState(0)
+  return (
+    <>
+      <MemoSon count={count} />
+      <button onClick={() => setCount(count + 1)}>+{count}</button>
+    </>
+  )
+}
+
+export default App
+```
+## props的比较机制
+> 对于props的比较，进行的是‘浅比较’，底层使用 `Object.is` 进行比较，针对于对象数据类型，只会对比两次的**引用是否相等**，如果不相等就会重新渲染，React并不关心对象中的具体属性
+
+如果需要传递引用类型的props,一般使用useMemo做缓存,useState有时也可以达到类似的效果但是语义上不明确
+
+```jsx
+import React, { useState } from 'react'
+
+const MemoSon = React.memo(function Son() {
+  console.log('子组件被重新渲染了')
+  return <div>this is span</div>
+})
+
+function App() {
+  // const [count, setCount] = useState(0)
+  const [list, setList] = useState([1, 2, 3])
+  return (
+    <>
+      <MemoSon list={list} />
+      <button onClick={() => setList([1, 2, 3])}>
+        {JSON.stringify(list)}
+      </button>
+    </>
+  )
+}
+
+export default App
+```
+说明：虽然俩次的list状态都是 `[1,2,3]` , 但是因为组件App俩次渲染生成了不同的对象引用list，所以传给MemoSon组件的props视为不同，子组件就会发生重新渲染
+## 自定义比较函数
+> 如果上一小节的例子，我们不想通过引用来比较，而是完全比较数组的成员是否完全一致，则可以通过自定义比较函数来实现
+
+```jsx
+import React, { useState } from 'react'
+
+// 自定义比较函数
+function arePropsEqual(oldProps, newProps) {
+  console.log(oldProps, newProps)
+  return (
+    oldProps.list.length === newProps.list.length &&
+    oldProps.list.every((oldItem, index) => {
+      const newItem = newProps.list[index]
+      console.log(newItem, oldItem)
+      return oldItem === newItem
+    })
+  )
+}
+
+const MemoSon = React.memo(function Son() {
+  console.log('子组件被重新渲染了')
+  return <div>this is span</div>
+}, arePropsEqual)
+
+function App() {
+  console.log('父组件重新渲染了')
+  const [list, setList] = useState([1, 2, 3])
+  return (
+    <>
+      <MemoSon list={list} />
+      <button onClick={() => setList([1, 2, 3])}>
+        内容一样{JSON.stringify(list)}
+      </button>
+      <button onClick={() => setList([4, 5, 6])}>
+        内容不一样{JSON.stringify(list)}
+      </button>
+    </>
+  )
+}
+
+export default App
+```
+# useCallback
+## 看个场景
+上一小节我们说到，当给子组件传递一个`引用类型`prop的时候，即使我们使用了`memo` 函数依旧无法阻止子组件的渲染(不使用其他缓存方法来稳定引用的情况下)，其实传递prop的时候，往往传递一个回调函数更为常见，比如实现子传父，此时如果想要避免子组件渲染，可以使用 `useCallback`缓存回调函数
+```jsx
+// useCallBack
+
+import { memo, useState } from 'react'
+
+const MemoSon = memo(function Son() {
+  console.log('Son组件渲染了')
+  return <div>this is son</div>
+})
+
+function App() {
+  const [, forceUpate] = useState()
+  console.log('父组件重新渲染了')
+  const onGetSonMessage = (message) => {
+    console.log(message)
+  }
+
+  return (
+    <div>
+      <MemoSon onGetSonMessage={onGetSonMessage} />
+      <button onClick={() => forceUpate(Math.random())}>update</button>
+    </div>
+  )
+}
+
+export default App
+```
+## useCallback缓存函数
+> useCallback缓存之后的函数可以在组件渲染时保持引用稳定，也就是返回同一个引用
+
+```jsx
+// useCallBack
+
+import { memo, useCallback, useState } from 'react'
+
+const MemoSon = memo(function Son() {
+  console.log('Son组件渲染了')
+  return <div>this is son</div>
+})
+
+function App() {
+  const [, forceUpate] = useState()
+  console.log('父组件重新渲染了')
+  const onGetSonMessage = useCallback((message) => {
+    console.log(message)
+  }, [])
+
+  return (
+    <div>
+      <MemoSon onGetSonMessage={onGetSonMessage} />
+      <button onClick={() => forceUpate(Math.random())}>update</button>
+    </div>
+  )
+}
+
+export default App
+```
+
+# forwardRef
+![[Pasted image 20251217210346.png]]
+作用：允许组件使用ref将一个DOM节点暴露给父组件
+
+>使用forwardRef时子组件的(props,ref)中的props不可缺省
+```jsx
+import { forwardRef, useRef } from 'react'
+
+const MyInput = forwardRef(function Input(props, ref) {
+  return <input {...props} type="text" ref={ref} />
+}, [])
+
+function App() {
+  const ref = useRef(null)
+
+  const focusHandle = () => {
+    console.log(ref.current.focus())
+  }
+
+  return (
+    <div>
+      <MyInput ref={ref} />
+      <button onClick={focusHandle}>focus</button>
+    </div>
+  )
+}
+
+export default App
+```
+# useImperativeHandle
+>这个需要配合forwardRef一起用
+
+作用：如果我们并不想暴露子组件中的DOM而是想暴露子组件内部的方法,在回调中返回的对象中就是暴露的所有方法,可以为多个
+```jsx
+import { forwardRef, useImperativeHandle, useRef } from 'react'
+
+const MyInput = forwardRef(function Input(props, ref) {
+  // 实现内部的聚焦逻辑
+  const inputRef = useRef(null)
+  const focus = () => inputRef.current.focus()
+
+  // 暴露子组件内部的聚焦方法
+  useImperativeHandle(ref, () => {
+    return {
+      focus,
+    }
+  })
+
+  return <input {...props} ref={inputRef} type="text" />
+})
+
+function App() {
+  const ref = useRef(null)
+
+  const focusHandle = () => ref.current.focus()
+
+  return (
+    <div>
+      <MyInput ref={ref} />
+      <button onClick={focusHandle}>focus</button>
+    </div>
+  )
+}
+
+export default App
+```
+# Class API(老标准)
+顾名思义，Class API就是使用ES6支持的原生Class API来编写React组件
+1. 每个组件都要继承自Component类
+2. 状态都要声明在state对象中
+3. 修改状态通过setState({})的方法
+4. jsx结构放在固定的render()函数中
+## 基础体验
+通过一个简单的 Counter 自增组件看一下组件的基础编写结构
+```jsx
+// class API
+import { Component } from 'react'
+
+class Counter extends Component {
+  // 状态变量
+  state = {
+    count: 0,
+  }
+
+  // 事件回调
+  clickHandler = () => {
+    // 修改状态变量 触发UI组件渲染
+    this.setState({
+      count: this.state.count + 1,
+    })
+  }
+
+  // UI模版
+  render() {
+    return <button onClick={this.clickHandler}>+{this.state.count}</button>
+  }
+}
+
+function App() {
+  return (
+    <div>
+      <Counter />
+    </div>
+  )
+}
+
+export default App
+```
+## 组件生命周期
+![[Pasted image 20251217213345.png]]
+1. componentDidMount：组件挂载完毕自动执行 - 异步数据获取
+2. componentDidUpdate: 组件每次更新时自动执行
+3. componentWillUnmount: 组件卸载时自动执行 - 清理副作用
+```js
+import { Component } from 'react'
+export class Son extends Component {
+  state = {
+    count: 0,
+  }
+
+  componentDidMount() {
+    console.log('组件渲染完毕')
+  }
+  componentWillUnmount() {
+    console.log('组件卸载完毕')
+  }
+  componentDidUpdate() {
+    console.log('组件更新完毕')
+  }
+  render() {
+    return (
+      <div>
+        i am Son
+        <div>
+          {this.state.count}
+          <button
+            onClick={() => {
+              this.setState({ count: this.state.count + 1 })
+            }}
+          >+</button>
+        </div>
+      </div>
+    )
+  }
+}
+```
+## 组件通信
+概念：类组件和Hooks编写的组件在组件通信的思想上完全一致
+1. 父传子：通过prop绑定数据
+2. 子传父：通过prop绑定父组件中的函数，子组件调用
+3. 兄弟通信：状态提升，通过父组件做桥接
+### 父传子
+在子组件中通过this.props.<对应的属性名>来访问父组件传递的属性
+```jsx
+// class API
+import { Component } from 'react'
+
+class Son extends Component {
+  render() {
+    const { count } = this.props
+    return <div>this is Son, {count}</div>
+  }
+}
+
+class App extends Component {
+  // 状态变量
+  state = {
+    count: 0,
+  }
+
+  setCount = () => {
+    this.setState({
+      count: this.state.count + 1,
+    })
+  }
+
+  // UI模版
+  render() {
+    return (
+      <>
+        <Son count={this.state.count} />
+        <button onClick={this.setCount}>+</button>
+      </>
+    )
+  }
+}
+
+export default App
+```
+### 子传父
+```jsx
+// class API
+import { Component } from 'react'
+
+class Son extends Component {
+  render() {
+    const { msg, onGetSonMsg } = this.props
+    return (
+      <>
+        <div>this is Son, {msg}</div>
+        <button onClick={() => onGetSonMsg('this is son msg')}>
+          changeMsg
+        </button>
+      </>
+    )
+  }
+}
+
+class App extends Component {
+  // 状态变量
+  state = {
+    msg: 'this is initail app msg',
+  }
+
+  onGetSonMsg = (msg) => {
+    this.setState({ msg })
+  }
+
+  // UI模版
+  render() {
+    return (
+      <>
+        <Son msg={this.state.msg} onGetSonMsg={this.onGetSonMsg} />
+      </>
+    )
+  }
+}
+
+export default App
+```
+
+更多阅读
+[Component – React 中文文档](https://zh-hans.react.dev/reference/react/Component)
+# zustand
+## 快速上手
+[Zustand Documentation](https://docs.pmnd.rs/zustand/getting-started/introduction)
+```shell
+npm i zustand
+```
+1. 函数参数必须返回一个对象,对象内部编写状态数据和方法
+2. set是用来修改数据的专门方法,必须调用它来修改数据
+	语法1: 需要用到老数据的场景,参数是函数
+	语法2: 参数直接是一个对象 set（{count：100})
+3. useStore方法返回的就是所有的状态和方法
+**store/index.js - 创建store**
+```javascript
+import { create } from 'zustand'
+
+const useStore = create((set) => {
+  return {
+    count: 0,
+    inc: () => {
+      set(state => ({ count: state.count + 1 }))
+      // 如果不需要依赖现有状态可以直接写一个set({count:<value>}),不是必须是函数
+    }
+  }
+})
+
+export default useStore
+```
+**app.js - 绑定组件**
+```jsx
+import useStore from './store/useCounterStore.js'
+
+function App() {
+  const { count, inc } = useStore()
+  return <button onClick={inc}>{count}</button>
+}
+
+export default App
+```
+
+## 异步支持
+对于异步操作的支持不需要特殊的操作，直接在函数中编写异步逻辑，最后把接口的数据放到set函数中返回即可
+**store/index.js - 创建store**
+```javascript
+import { create } from 'zustand'
+
+const URL = 'http://geek.itheima.net/v1_0/channels'
+
+const useStore = create((set) => {
+  return {
+    count: 0,
+    ins: () => {
+      return set(state => ({ count: state.count + 1 }))
+    },
+    channelList: [],
+    fetchChannelList: async () => {
+      const res = await fetch(URL)
+      const jsonData = await res.json()
+      set({channelList: jsonData.data.channels})
+    }
+  }
+})
+
+export default useStore
+```
+**app.js - 绑定组件**
+```jsx
+import { useEffect } from 'react'
+import useChannelStore from './store/channelStore'
+
+function App() {
+  const { channelList, fetchChannelList } = useChannelStore()
+ 
+  useEffect(() => {
+    fetchChannelList()
+  }, [fetchChannelList])
+
+  return (
+    <ul>
+      {channelList.map((item) => (
+        <li key={item.id}>{item.name}</li>
+      ))}
+    </ul>
+  )
+}
+
+export default App
+```
+## 切片模式
+场景：当我们单个store比较大的时候，可以采用一种`切片模式`进行模块拆分再组合
+**注意切片是单纯的方法,而不是create方法返回的钩子**
+### 拆分并组合切片
+```javascript
+
+import { create } from 'zustand'
+
+// 创建counter相关切片
+const createCounterStore = (set) => { 
+  return {
+    count: 0,
+    setCount: () => {
+      set(state => ({ count: state.count + 1 }))
+    }
+  }
+}
+
+// 创建channel相关切片
+const createChannelStore = (set) => {
+  return {
+    channelList: [],
+    fetchGetList: async () => {
+      const res = await fetch(URL)
+      const jsonData = await res.json()
+      set({ channelList: jsonData.data.channels })
+    }
+  }
+}
+
+// 组合切片
+const useStore = create((...a) => ({
+  ...createCounterStore(...a),
+  ...createChannelStore(...a)
+}))
+```
+### 组件使用
+```jsx
+function App() {
+  const {count, inc, channelList, fetchChannelList } = useStore()
+  return (
+    <>
+      <button onClick={inc}>{count}</button>
+      <ul>
+        {channelList.map((item) => (
+          <li key={item.id}>{item.name}</li>
+        ))}
+      </ul>
+    </>
+  )
+}
+
+export default App
+```
+
+## 对接DevTools
+> 简单的调试我们可以安装一个 名称为 simple-zustand-devtools 的调试工具
+
+### 安装调试包
+```bash
+npm i simple-zustand-devtools -D
+```
+### 配置调试工具
+```javascript
+import create from 'zustand'
+
+// 导入核心方法
+import { mountStoreDevtool } from 'simple-zustand-devtools'
+
+// 省略部分代码...
+
+
+// 开发环境开启调试
+if (process.env.NODE_ENV === 'development') {
+  mountStoreDevtool('channelStore', useChannelStore)
+}
+
+
+export default useChannelStore
+```
+### 打开 React调试工具
+![[Pasted image 20251217215331.png]]
+
+# React+TS
+React和TypeScript集合使用的重点集中在 `和存储数据/状态有关的Hook函数` 以及 `组件接口` 的位置，这些地方最需要数据类型校验
+
+## 使用Vite创建项目
+> Vite是一个框架无关的前端工具链工具，可以帮助我们快速创建一个 `react+ts` 的工程化环境出来，我们可以基于它做语法学习
+
+[开始 | Vite 官方中文文档](https://cn.vitejs.dev/guide/)
+```bash
+npm create vite@latest <项目名称> -- --template react-ts
+```
+有用的基本就是这些
+![[Pasted image 20251222200826.png]]
+>在vite7之前还可能会有一个vite-env.d.ts的类型文件,vite7之后被包括进tsconfig.app.json所以就没有了
+## 安装依赖运行项目
+```bash
+# 安装依赖
+npm i 
+
+# 运行项目
+npm run dev
+```
+
+## useState
+###  简单场景
+通常React会根据**传入useState的默认值**来自动推导类型,不需要显式标注类型
+> 简单场景下，可以使用TS的自动推断机制，不用特殊编写类型注解，运行良好
+
+```typescript
+const [val, toggle] = React.useState(false)
+
+// `val` 会被自动推断为布尔类型
+// `toggle` 方法调用时只能传入布尔类型
+```
+### 复杂场景
+> 复杂数据类型，useState支持通过`泛型参数`指定初始参数类型以及setter函数的入参类型
+
+```typescript
+type User = {
+  name: string
+  age: number
+}
+const [user, setUser] = React.useState<User>({
+  name: 'jack',
+  age: 18
+})
+// 执行setUser
+setUser(newUser)
+// 这里newUser对象只能是User类型
+```
+1. 限制useState函数参数的初始值必须满足类型为： User | （）=> User
+2. 限制setUser函数的参数必须满足类型为：User | （）=> User | undefined(undefined只有在指定了泛型的同时默认值为空才可以传入)
+3. user状态数据具备User类型相关的类型提示
+### 没有具体默认值
+> 实际开发时，有些时候useState的初始值可能为null或者undefined，按照泛型的写法是不能通过类型校验的，此时可以通过完整的类型联合null或者undefined类型即可
+
+```typescript
+type User = {
+  name: String
+  age: Number
+}
+const [user, setUser] = React.useState<User>(null)
+// 上面会类型错误，因为null并不能分配给User类型
+
+const [user, setUser] = React.useState<User | null>(null)
+// 上面既可以在初始值设置为null，同时满足setter函数setUser的参数可以是具体的User类型
+```
+## useRef
+> 在TypeScript的环境下，`useRef` 函数返回一个`只读` 或者 `可变` 的引用，只读的场景常见于获取真实dom，可变的场景，常见于缓存一些数据，不跟随组件渲染，下面分俩种情况说明
+
+### 获取dom
+> 获取DOM时，通过泛型参数指定具体的DOM元素类型即可
+
+```tsx
+function Foo() {
+  // 尽可能提供一个具体的dom type, 可以帮助我们在用dom属性时有更明确的提示
+  // divRef的类型为 RefObject<HTMLDivElement>
+  const inputRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    inputRef.current.focus()
+  }) 
+
+  return <div ref={inputRef}>etc</div>
+}
+```
+如果你可以确保`divRef.current` 不是null，也可以在传入初始值的位置
+```typescript
+// 添加非null标记
+const divRef = useRef<HTMLDivElement>(null!)
+// 不再需要检查`divRef.current` 是否为null
+doSomethingWith(divRef.current)
+```
+### 稳定引用存储器
+> 当做为可变存储容器使用的时候，可以通过`泛型参数`指定容器存入的数据类型, 在还为存入实际内容时通常把null作为初始值，所以依旧可以通过联合类型做指定
+
+```tsx
+interface User {
+  age: number
+}
+
+function App(){
+  const timerRef = useRef<number | undefined>(undefined)
+  const userRes = useRef<User | null> (null)
+  useEffect(()=>{
+    timerRef.current = window.setInterval(()=>{
+      console.log('测试')
+    },1000)
+    
+    
+    return ()=>clearInterval(timerRef.current)
+  })
+  return <div> this is app</div>
+}
+```
+## props
+### 为Props添加类型
+> props作为React组件的参数入口，添加了类型之后可以限制参数输入以及在使用props有良好的类型提示
+
+为组件prop添加类型，本质是给函数的参数做类型注解，可以使用type对象类型或者interface接口来做注解
+
+**使用interface接口**
+```tsx
+interface Props {
+  className: string
+}
+
+export const Button = (props:Props)=>{
+  const { className } = props
+  return <button className={ className }>Test</button>
+}
+```
+**使用自定义类型Type**
+```tsx
+type Props =  {
+  className: string
+}
+
+export const Button = (props:Props)=>{
+  const { className } = props
+  return <button className={ className }>Test</button>
+}
+```
+说明：Button组件只能传入**名称为**className的prop参数，**类型**为string, 且为**必填**
+### 为Props的chidren属性添加类型
+> children属性和props中其他的属性不同，它是React系统中内置的，其它属性我们可以自由控制其类型，children属性的类型最好由React内置的类型ReactNode提供，兼容多种类型
+
+Test.tsx
+```tsx
+import type { ReactNode } from "react"
+
+type Props = {
+  className: string
+  children:ReactNode
+}
+
+export function Test(props:Props) {
+  return <div><button>{props.className}</button>{props.children}</div>
+}
+```
+App.tsx
+```tsx
+import {  useState } from "react"
+import { Test } from "./component/Test"
+
+function App() {
+  const [value, setValue] = useState(false)
+  return (
+    <div>{value &&<div>Test</div>}<button onClick={()=>{setValue(!value)}}>click</button><Test className="TAT"><div>children</div></Test></div>
+  )
+}
+
+export default App
+```
+说明：React.ReactNode是一个React内置的联合类型，包括 `React.ReactElement` 、`string`、`number` `React.ReactFragment` 、`React.ReactPortal` 、`boolean`、 `null` 、`undefined`
+### 为事件prop添加类型
+组件经常执行类型为函数的prop实现子传父，这类prop重点在于函数参数类型的注解
+```tsx
+// props + ts
+type Props = {
+  onGetMsg?: (msg: string) => void
+}
+
+function Son(props: Props) {
+  const { onGetMsg } = props
+  const clickHandler = () => {
+    onGetMsg?.('this is msg')
+  }
+  return <button onClick={clickHandler}>sendMsg</button>
+}
+
+function App() {
+  const getMsgHandler = (msg: string) => {
+    console.log(msg)
+  }
+  return (
+    <>
+      <Son onGetMsg={(msg) => console.log(msg)} />
+      <Son onGetMsg={getMsgHandler} />
+    </>
+  )
+}
+
+export default App
+```
+说明：
+1. 在组件内部调用时需要遵守类型的约束，参数传递需要满足要求
+2. 绑定prop时如果传入的是内联函数直接可以推断出参数类型
+>也就是说,如果你绑定的是在父组件中定义好的方法,而且方法没有声明类型,
+### 为事件handle添加类型
+> 为事件回调添加类型约束需要使用React内置的泛型函数来做，比如最常见的鼠标点击事件和表单输入事件：
+
+```tsx
+function App(){
+  const changeHandler: React.ChangeEventHandler<HTMLInputElement> = (e)=>{
+    console.log(e.target.value)
+  }
+  
+  const clickHandler: React.MouseEventHandler<HTMLButtonElement> = (e)=>{
+    console.log(e.target)
+  }
+
+  return (
+    <>
+      <input type="text" onChange={ changeHandler }/>
+      <button onClick={ clickHandler }> click me!</button>
+    </>
+  )
+}
+```
+
 
