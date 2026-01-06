@@ -272,13 +272,66 @@ function App(){
 
 ![[Pasted image 20250923195824.png]]
 其实还是传进来什么count就会被修改成什么,这里就算写一个数字还是可以正确执行的,这种修改方式实际上是在想要修改当前对象的某个属性时使用的
+# useRef
+`useRef` 用于在组件的整个生命周期中，保存一个**可变但不触发重新渲染**的值，并且可以用来直接引用真实 DOM。
+它有两种完全不同但同源的用途：
+1. DOM 引用
+2. 跨渲染保存可变数据
+```js
+const ref = useRef(initialValue);
+```
+- 返回一个对象：`{ current: initialValue }`
+- **这个对象在组件的整个生命周期中保持不变**,只有在组件卸载时才会删除
+- 改变 `ref.current` **不会触发组件重新渲染**,不参与diff
+- 想要修改可以直接通过current修改,无需set方法
+当ref钩子用于引用dom元素时,其在不同时刻状态如下
+- render 阶段：`inputRef.current === null`
+- commit 阶段后：React 将 DOM 节点赋值给 `current`
+- effect / 事件中可安全访问
+所以**不要在 render 阶段读 DOM**,也不要依赖数值ref的变化,如比较大小之类的行为
 # 组件的基础样式处理
-> React组件基础的样式控制有俩种方式，行内样式和class类名控制
-
+## 在组件内直接使用
 ```jsx
 <div style={{ color:'red'}}>this is div</div>
-```
+// 或
+import React, { Component } from "react";
 
+const div1 = {
+  width: "300px",
+  margin: "30px auto",
+  backgroundColor: "#44014C",  //驼峰法
+  minHeight: "200px",
+  boxSizing: "border-box"
+};
+
+class Test extends Component {
+  constructor(props, context) {
+    super(props);
+  }
+ 
+  render() {
+    return (
+     <div>
+       <div style={div1}>123</div>
+       <div style={{backgroundColor:"red"}}>
+     </div>
+    );
+  }
+}
+
+export default Test;
+```
+>`css`属性需要转换成驼峰写法
+
+优点：
+- 内联样式, 样式之间**不会有冲突**
+- 可以动态获取当前state中的状态
+缺点：
+- 写法上都需要使用驼峰标识
+- 某些样式没有提示
+- 大量的样式, **代码混乱**
+- **某些样式无法编写**(比如伪类/伪元素)
+## 组件中引入css文件
 ```css
 .foo{
   color: red;
@@ -296,6 +349,145 @@ function App(){
   )
 }
 ```
+缺点:样式是**全局生效**，样式之间会互相影响
+## CSS Modules
+>(.module.scss或者less都是可以的)
+
+CSS Modules(.module.css)不是一种新的 CSS 语法，而是：
+- **普通 CSS**
+- 但通过构建工具（Webpack / Vite）处理(只要后缀是这个就会自动处理,无需额外配置)
+- 让 **CSS 类名变成“模块作用域”**
+将`css`文件作为一个模块引入，这个模块中的所有`css`，只作用于当前组件。不会影响当前组件的后代组件
+```css
+/* Button.module.css */
+.btn {
+  background: blue;
+  color: white;
+}
+```
+
+```js
+import styles from './Button.module.css';
+
+function Button() {
+  return <button className={styles.btn}>Click</button>;
+}
+```
+渲染结果
+```html
+<button class="Button_btn__3Kf9A">Click</button>
+```
+
+这种方式能够解决局部作用域问题，但也有一定的缺陷：
+- 引用的类名，不能使用连接符(.xxx-xx)，在 JavaScript 中是不识别的
+- 所有的 className 都必须使用 {style.className} 的形式来编写
+- **不方便动态**来修改某些样式，依然需要使用内联样式的方式
+**工作原理**
+构建阶段发生三件事：
+1. 类名映射表生成
+```js
+{
+  btn: 'Button_btn__3Kf9A'
+}
+```
+2. CSS 中的类名被重写
+3. JS 中通过对象访问真实类名(所以必须使用 {style.className} 的形式)
+## CSS in JS
+CSS-in-JS， 是指一种模式，其中`CSS`由 `JavaScript`生成而不是在外部文件中定义,由第三方库提供(如**styled-components**,emotion,glamorous等)
+### `styled-components`的基本使用
+```shell
+npm install styled-components
+```
+本质是通过函数的调用，最终创建出一个组件：
+- 这个组件会被自动添加上一个不重复的class
+- styled-components会给该class添加相关的样式
+1. 创建一个`style.js`文件用于存放样式组件：
+```js
+export const SelfLink = styled.div`
+  height: 50px;
+  border: 1px solid red;
+  color: yellow;
+`;
+
+export const SelfButton = styled.div`
+  height: 150px;
+  width: 150px;
+  color: ${props => props.color};
+  background-image: url(${props => props.src});
+  background-size: 150px 150px;
+`;
+
+export const Button = styled.button`
+  background: blue;
+  color: white;
+  padding: 8px 16px;
+`;
+```
+>这里就是<组件名> = style.<标签名>,有点像包装组件,之后直接使用组件名就自动带样式了,这些都是react的组件,也就是说**可以接收props**用于动态css
+2. 引入样式组件
+```js
+import React, { Component } from "react";
+
+import { SelfLink, SelfButton } from "./style";
+
+class Test extends Component {
+  constructor(props, context) {
+    super(props);
+  }  
+ 
+  render() {
+    return (
+     <div>
+       <SelfLink title="People's Republic of China">app.js</SelfLink>
+       <SelfButton color="palevioletred" style={{ color: "pink" }} src={fist}>
+          SelfButton
+        </SelfButton>
+     </div>
+    );
+  }
+}
+
+export default Test;
+```
+### 工作原理
+运行时机制
+1. **组件首次渲染**
+2. styled-components 根据模板字符串 + props
+3. **生成唯一类名**
+4. **动态注入 `<style>` 标签**
+5. DOM 使用生成的 class
+```html
+<style>
+.sc-AxjAm { background: blue; }
+</style>
+
+<button class="sc-AxjAm">Click</button>
+```
+>样式是 **运行时生成**，不是构建时。
+### 主题（Theme）系统
+1. 定义主题
+```js
+import { ThemeProvider } from 'styled-components';
+
+const theme = {
+  primary: 'blue',
+  danger: 'red'
+};
+```
+
+```js
+<ThemeProvider theme={theme}>
+  <App />
+</ThemeProvider>
+```
+2. 使用主题
+```js
+const Button = styled.button`
+  color: ${props => props.theme.primary};
+`;
+```
+
+📌 非常适合设计系统 / UI 库。
 ## classnames
 想要动态处理css样式的话,可以使用格式字符串写上类名,需要判断是否添加的类名的处理逻辑和元素一致
 ```jsx
@@ -322,6 +514,223 @@ npm i classnames
 </span>
 ```
 这里的active为需要判断的类名,不需要加引号,后边跟的是判断条件,如果还有需要控制的类名则接着往后写{},{}...即可
+# 组件间过渡动画
+在`react`中实现过渡动画效果会有很多种选择，`react-transition-group`是一种很好的解决方案，其为元素添加`enter`，`enter-active`，`exit`，`exit-active`这一系列钩子可以帮助我们方便的实现组件的入场和离场动画
+其主要提供了三个主要的组件：
+- CSSTransition：在前端开发中，结合 CSS 来完成过渡动画效果
+- SwitchTransition：两个组件显示和隐藏切换时，使用该组件
+- TransitionGroup：将多个动画组件包裹在其中，一般用于列表中元素的动画
+## CSSTransition
+其实现动画的原理在于，当`CSSTransition`的`in`属性置为`true`时，`CSSTransition`首先会给其**子组件**加上`xxx-enter`、`xxx-enter-active`的`class`执行动画
+
+当动画执行结束后，会移除两个`class`，并且添加`-enter-done`的`class`
+
+所以可以利用这一点，通过`css`的`transition`属性，让元素在两个状态之间平滑过渡，从而得到相应的动画效果
+
+当`in`属性置为`false`时，`CSSTransition`会给子组件加上`xxx-exit`和`xxx-exit-active`的`class`，然后开始执行动画，当动画结束后，移除两个`class`，然后添加`-enter-done`的`class`
+
+如下例子：
+```js
+export default class App2 extends React.PureComponent {
+
+  state = {show: true};
+
+  onToggle = () => this.setState({show: !this.state.show});
+
+  render() {
+    const {show} = this.state;
+    return (
+      <div className={'container'}>
+        <div className={'square-wrapper'}>
+          <CSSTransition
+            in={show}
+            timeout={500}
+            classNames={'fade'}
+            unmountOnExit={true}
+          >
+            <div className={'square'} />
+          </CSSTransition>
+        </div>
+        <Button onClick={this.onToggle}>toggle</Button>
+      </div>
+    );
+  }
+}
+```
+对应`css`样式如下：
+```css
+.fade-enter {
+  opacity: 0;
+  transform: translateX(100%);
+}
+
+.fade-enter-active {
+  opacity: 1;
+  transform: translateX(0);
+  transition: all 500ms;
+}
+
+.fade-exit {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+.fade-exit-active {
+  opacity: 0;
+  transform: translateX(-100%);
+  transition: all 500ms;
+}
+```
+## SwitchTransition
+`SwitchTransition`可以完成**两个组件之间**切换的炫酷动画
+
+比如有一个按钮需要在`on`和`off`之间切换，我们希望看到`on`先从左侧退出，`off`再从右侧进入
+
+`SwitchTransition`中主要有一个属性`mode`，对应两个值：
+
+- in-out：表示新组件先进入，旧组件再移除；
+- out-in：表示就组件先移除，新组建再进入
+
+`SwitchTransition`组件里面要有`CSSTransition`，不能直接包裹你想要切换的组件
+
+里面的`CSSTransition`组件不再像以前那样接受`in`属性来判断元素是何种状态，取而代之的是`key`属性
+
+下面给出一个按钮入场和出场的示例，如下：
+```js
+import { SwitchTransition, CSSTransition } from "react-transition-group";
+
+export default class SwitchAnimation extends PureComponent {
+  constructor(props) {
+    super(props);
+
+    this.state = {
+      isOn: true
+    }
+  }
+
+  render() {
+    const {isOn} = this.state;
+
+    return (
+      <SwitchTransition mode="out-in">
+        <CSSTransition classNames="btn"
+                       timeout={500}
+                       key={isOn ? "on" : "off"}>
+          {
+          <button onClick={this.btnClick.bind(this)}>
+            {isOn ? "on": "off"}
+          </button>
+        }
+        </CSSTransition>
+      </SwitchTransition>
+    )
+  }
+
+  btnClick() {
+    this.setState({isOn: !this.state.isOn})
+  }
+}
+```
+`css`文件对应如下：
+```css
+.btn-enter {
+  transform: translate(100%, 0);
+  opacity: 0;
+}
+
+.btn-enter-active {
+  transform: translate(0, 0);
+  opacity: 1;
+  transition: all 500ms;
+}
+
+.btn-exit {
+  transform: translate(0, 0);
+  opacity: 1;
+}
+
+.btn-exit-active {
+  transform: translate(-100%, 0);
+  opacity: 0;
+  transition: all 500ms;
+}
+```
+## TransitionGroup
+当有一组动画的时候，就可将这些`CSSTransition`放入到一个`TransitionGroup`中来完成动画
+
+同样`CSSTransition`里面没有`in`属性，用到了`key`属性
+
+`TransitionGroup`在感知`children`发生变化的时候，先保存移除的节点，当动画结束后才真正移除
+
+其处理方式如下：
+
+- 插入的节点，先渲染dom，然后再做动画
+- 删除的节点，先做动画，然后再删除dom
+
+如下：
+```js
+import React, { PureComponent } from 'react'
+import { CSSTransition, TransitionGroup } from 'react-transition-group';
+
+export default class GroupAnimation extends PureComponent {
+  constructor(props) {
+    super(props);
+
+    this.state = {
+      friends: []
+    }
+  }
+
+  render() {
+    return (
+      <div>
+        <TransitionGroup>
+          {
+            this.state.friends.map((item, index) => {
+              return (
+                <CSSTransition classNames="friend" timeout={300} key={index}>
+                  <div>{item}</div>
+                </CSSTransition>
+              )
+            })
+          }
+        </TransitionGroup>
+        <button onClick={e => this.addFriend()}>+friend</button>
+      </div>
+    )
+  }
+
+  addFriend() {
+    this.setState({
+      friends: [...this.state.friends, "coderwhy"]
+    })
+  }
+}
+```
+对应`css`如下：
+```css
+.friend-enter {
+    transform: translate(100%, 0);
+    opacity: 0;
+}
+
+.friend-enter-active {
+    transform: translate(0, 0);
+    opacity: 1;
+    transition: all 500ms;
+}
+
+.friend-exit {
+    transform: translate(0, 0);
+    opacity: 1;
+}
+
+.friend-exit-active {
+    transform: translate(-100%, 0);
+    opacity: 0;
+    transition: all 500ms;
+}
+```
 # React表单控制
 ## 受控绑定
 > 概念：使用React组件的状态（useState）控制表单的状态,即将state绑定到表单的value上
@@ -363,6 +772,7 @@ function App(){
   )
 }
 ```
+![[Pasted image 20251225211815.png]]
 # uuid
 >用于生成唯一id
 ```shell
@@ -402,9 +812,9 @@ dayjs(new Date()).format()
 1. A-B 父子通信
 2. B-C 兄弟通信
 3. A-E 跨层通信
-# 父子通信-父传子
+## 父子通信-父传子
 ![[Pasted image 20250923220128.png]]
-## 基础实现
+### 基础实现
 **实现步骤**
 1. 父组件传递数据 - 在子组件标签上绑定属性 
 2. 子组件接收数据 - 子组件通过props参数接收数据
@@ -423,19 +833,19 @@ function App(){
   )
 }
 ```
-## props说明
+### props说明
 **props可以传递任意的合法数据**，比如数字、字符串、布尔值、数组、对象、函数、JSX
 ![[Pasted image 20250923220134.png]]
 **props是只读对象**
 子组件只能读取props中的数据，不能直接进行修改, 父组件的数据只能由父组件修改 
 
-## 特殊的prop-chilren
+### 特殊的prop-chilren
 > 场景：当我们把内容嵌套在组件的标签内部时，组件会自动在名为children的prop属性中接收该内容
 
 ![[Pasted image 20250923220138.png]]
 ![[Pasted image 20251009215359.png]]
 >也就是说,在子组件标签的内部也是可以写jsx的,但是不会直接渲染在子组件内,而是由props的children属性来接受后自己选择在哪里解析渲染
-# 父子通信-子传父
+## 父子通信-子传父
 ![[Pasted image 20250923220143.png]]
 > 核心思路：在子组件中调用父组件中的函数并传递参数
 
@@ -463,7 +873,7 @@ function App(){
 }
 ```
 >感觉像是调用了一个绑定了this的函数
-# 兄弟组件通信
+## 兄弟组件通信
 ![[Pasted image 20250923220149.png]]
 > 实现思路: 借助 `状态提升` 机制，通过共同的父组件进行兄弟之间的数据传递
 > 1. A组件先通过子传父的方式把数据传递给父组件App
@@ -512,7 +922,7 @@ function App () {
 
 export default App
 ```
-# 跨层组件通信
+## 跨层组件通信
 ![[Pasted image 20250923220155.png]]
 **实现步骤：**
 
@@ -767,7 +1177,6 @@ export default App
 3. reducer:  一个函数 根据action的描述更新state
 # Redux与React - 环境准备
 > Redux虽然是一个框架无关可以独立运行的插件，但是社区通常还是把它与React绑定在一起使用，以一个计数器案例体验一下Redux + React 的基础使用
-
 ## 1. 配套工具
 > 在React中使用redux，官方要求安装俩个其他插件 - Redux Toolkit 和 react-redux
 
@@ -962,6 +1371,56 @@ function App () {
 
 export default App
 ```
+# Redux中间件
+`Redux`中，中间件就是放在就是在`dispatch`过程，在分发`action`进行拦截处理，如下图：
+![[Pasted image 20251227135936.png]]
+其本质上一个函数，对`store.dispatch`方法进行了改造，在发出 `Action`和执行 `Reducer`这两步之间，添加了其他功能
+
+中间件都需要通过`applyMiddlewares`进行注册，作用是将所有的中间件组成一个数组，依次执行
+然后作为第二个参数传入到`createStore`中
+```js
+const store = createStore(
+  reducer,
+  applyMiddleware(thunk, logger)
+);
+```
+在`applyMiddleware`中所有中间件被放进了一个数组`chain`，然后嵌套执行，最后执行`store.dispatch`。所以中间件内部（`middlewareAPI`）可以拿到`getState`和`dispatch`这两个方法
+## redux-thunk
+`redux-thunk`是官网推荐的异步处理中间件
+
+默认情况下的`dispatch(action)`，`action`需要是一个`JavaScript`的对象
+
+`redux-thunk`中间件会判断你当前传进来的数据类型，如果是一个函数，将会给函数传入参数值（dispatch，getState）
+
+- dispatch函数用于我们之后再次派发action
+- getState函数考虑到我们之后的一些操作需要依赖原来的状态，用于让我们可以获取之前的一些状态
+
+所以`dispatch`可以写成下述函数的形式：
+```js
+const getHomeMultidataAction = () => {
+  return (dispatch) => {
+    axios.get("https://web.archive.org/web/20250126154403/http://xxx.xx.xx.xx/test").then(res => {
+      const data = res.data.data;
+      dispatch(changeBannersAction(data.banner.list));
+      dispatch(changeRecommendsAction(data.recommend.list));
+    })
+  }
+}
+```
+## redux-logger
+
+如果想要实现一个日志功能，则可以使用现成的`redux-logger`
+```js
+import { applyMiddleware, createStore } from 'redux';
+import createLogger from 'redux-logger';
+const logger = createLogger();
+
+const store = createStore(
+  reducer,
+  applyMiddleware(logger)
+);
+```
+这样我们就能简单通过中间件函数实现日志记录的信息
 # Redux调试 - devtools
 > Redux官方提供了针对于Redux的调试工具，支持实时state信息展示，action提交信息查看等
 > [Redux DevTools - Microsoft Edge Addons](https://microsoftedge.microsoft.com/addons/detail/redux-devtools/anmpkbapfgpmemgdomlejpgljkoflifc)
@@ -1453,6 +1912,27 @@ ReactDOM.createRoot(document.getElementById('root')).render(
 | --- | --- | --- | --- |
 | history | url/login | history对象 + pushState事件 | 需要 |
 | hash | url/#/login | 监听hashChange事件 | 不需要 |
+# 高阶组件(HOC)
+高阶组件是一个函数(不直接当做组件使用,这是定义层面上的限制)，它接收一个组件，并返回一个新的组件。
+```js
+// 注入登录信息
+function withAuth(WrappedComponent) {
+  return function AuthComponent(props) {
+    const isLogin = true; // 假设来自全局状态
+
+    if (!isLogin) {
+      return <div>请先登录</div>;
+    }
+
+    return <WrappedComponent {...props} />;
+  };
+}
+```
+**核心特征：**
+- 不修改原组件
+- 通过“包裹”的方式增强行为
+- 本质是**组件复用逻辑的模式**
+>高阶组件和包装组件的差别只是语义不同,效果是一致的,hoc用于**行为增强**,wrapper用于**结构组合**,并且一般hoc不推荐在返回的组件中为原组件包裹别的标签,但wrapper中可以这样
 # 项目demo
 ## 基于CRA创建项目
 > CRA是一个底层基于webpack快速创建React项目的脚手架工具
@@ -2005,7 +2485,7 @@ request.interceptors.request.use(config => {
 })
 ```
 ### 路由鉴权实现
-> 业务背景：封装 `AuthRoute` 路由鉴权高阶组件，实现未登录拦截，并跳转到登录页面
+> 业务背景：封装 `AuthRoute` 路由鉴权包装组件，实现未登录拦截，并跳转到登录页面
 > 实现思路：判断本地是否有token，如果有，就返回子组件，否则就重定向到登录Login
 
 **实现步骤**

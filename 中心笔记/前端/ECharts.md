@@ -240,7 +240,7 @@ const option = {
 }
 ```
 ![[Pasted image 20251123175725.png]]
->就是外边那个红框,有点类似盒子模型的border
+>就是外边那个红框,有点类似盒子模型的border和margin的合体,show不显示的话就类似margin使用
 ### 坐标轴 axis
 坐标轴分为x轴和y轴, 一个 grid 中最多有两种位置的 x 轴和 y 轴
 - 坐标轴类型 type
